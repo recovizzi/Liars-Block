@@ -1,0 +1,87 @@
+1. Architecture et Technologies Utilisées
+Blockchain Ethereum & Smart Contracts en Solidity
+
+Les règles, la gestion des mises et la distribution des gains seront implémentées via des contrats intelligents.
+Chaque partie (ou lobby) pourrait être déployée en tant que smart contract autonome, ou bien une architecture modulaire où un contrat central gère la création des lobbies et la distribution des tokens, tandis que les parties elles-mêmes sont des instances distinctes.
+Utilisation d’IPFS
+
+Pour enregistrer et transmettre de manière infalsifiable les actions des joueurs (coups joués, challenges, résultats des manches, etc.), l’IPFS servira de couche off-chain.
+Les données critiques peuvent être hachées et enregistrées sur la blockchain pour garantir l’intégrité des informations tout en évitant les frais élevés de stockage on-chain.
+Token Economique (LIE – “Liers”)
+
+Les joueurs doivent posséder des tokens LIE pour participer.
+Deux mécanismes d’acquisition sont envisagés :
+Conversion directe : Échanger des ETH contre des tokens LIE via une interface de swap intégrée.
+VIP & réapprovisionnement automatique : Une VIP list manuelle (gérée par l’owner ou via un DAO) permettant aux joueurs de récupérer automatiquement une quantité fixe de tokens (par exemple 100 tokens toutes les 10 minutes) en cas d’épuisement de leur solde.
+Économie du token et Interopérabilité
+
+Les tokens LIE pourront être échangés entre joueurs ou potentiellement listés sur des DEX, afin de créer une véritable économie dans le jeu.
+La conception doit veiller à limiter l’inflation des tokens en ajustant la formule de redistribution des gains (voir section sur le système de gains).
+2. Fonctionnalités et Gestion des Lobbies
+Création et Rejoindre une Partie
+Trois modes de connexion seront proposés :
+
+Rejoindre une partie aléatoire : L’utilisateur est automatiquement placé dans un lobby existant qui n’est pas complet.
+Créer une partie : Un lobby est généré et un code unique est attribué pour que des amis puissent rejoindre.
+Rejoindre avec un code : L’utilisateur peut tenter de rejoindre un lobby en utilisant le code de partie. Si ce lobby est complet ou inexistant, il sera redirigé vers un lobby aléatoire.
+Fonctions principales exposées par l’API Smart Contract :
+
+createLobby() : Crée un nouveau lobby sans paramètres (les règles de la partie et le nombre de joueurs seront pré-définis dans le contrat).
+joinLobby(optionalCode) : Permet de rejoindre un lobby en fournissant un code facultatif.
+Possibilité d’ajouter d’autres fonctions de gestion (ex. : leaveLobby(), getLobbyStatus() pour vérifier l’état du lobby, etc.).
+Structure des Parties :
+Il faut décider si chaque partie est gérée par un smart contract individuel (avantage en termes d’isolation et de sécurité) ou si un contrat central gère plusieurs instances (pour réduire les coûts de déploiement). Une approche hybride pourrait être d’utiliser un contrat maître pour orchestrer la création et la clôture des parties, tandis que les parties actives sont gérées par des contrats dédiés.
+
+3. Mécanique du Jeu et Règles Adaptées
+Distribution et Gestion des Cartes :
+
+Chaque joueur reçoit 5 cartes (les cartes pouvant être représentées sous forme de données encryptées et stockées en IPFS ou dans une structure off-chain avec preuve de validité).
+Un algorithme aléatoire (potentiellement basé sur un oracle ou un mécanisme de verifiable randomness) détermine le type de carte de référence pour la manche.
+Déroulement d’une Manche :
+
+Début de Manche :
+
+Un joueur est choisi pour commencer (ou le dernier perdant de round précédent commence).
+Le type de carte (par exemple, Roi, Dame ou As) est déterminé aléatoirement et affiché à tous via l’interface.
+Tour de Jeu :
+
+Chaque joueur, à son tour, choisit 1 à 3 cartes dans sa main et les joue de manière cachée et encryptée (les données sont enregistrées sur IPFS avec leur hash inscrit dans le smart contract pour garantir l’immuabilité).
+Le joueur suivant a le choix entre :
+Accuser de mensonge : Déclencher le mécanisme de vérification du dernier coup joué.
+Jouer ses cartes : Continuer la séquence.
+Défi et Révélation :
+
+En cas d’accusation, le smart contract déclenche une procédure qui déchiffre la dernière main jouée (via un mécanisme de révélation cryptographique préalablement défini).
+Si la main correspond à la carte de référence : L’accusateur se trompe et subit la sanction.
+Si la main ne correspond pas (bluff avéré) : Le joueur bluffeur subit la sanction.
+Sanction – Roue de la Roulette Russe :
+
+Le joueur sanctionné doit jouer une "roulette russe" virtuelle.
+Le nombre de « balles » dans le revolver est déterminé par le nombre de rounds perdus (min. 1, max. 6).
+Un tir aléatoire (via oracle de randomisation) détermine si le joueur survit au round ou s’il est éliminé (perte totale de sa mise dans la partie).
+Fin de Partie et Distribution des Gains :
+
+Le dernier joueur en vie remporte un pourcentage des mises totales, ajusté en fonction du nombre de joueurs, des mises individuelles et d’un système de pondération pour limiter la création excessive de tokens.
+La formule de distribution devra être soigneusement définie afin de préserver la rareté du token LIE tout en récompensant les risques pris par les joueurs.
+4. Aspects Sécuritaires et Performances
+Sécurité et Vérifiabilité :
+
+Les smart contracts doivent être audités pour éviter les vulnérabilités (ex. reentrancy, overflow).
+L’utilisation de mécanismes de preuve cryptographique pour la révélation des mains jouées garantit que personne ne peut tricher.
+Réduction des Coûts (Gas Fees) :
+
+Enregistrer uniquement les éléments essentiels sur-chain et utiliser IPFS pour stocker les données plus volumineuses.
+Possibilité d’envisager une solution de couche 2 (ex. Polygon ou Optimism) pour réduire les frais de transaction et améliorer l’expérience utilisateur.
+Expérience Utilisateur et Interface :
+
+Une interface web ou décentralisée (DApp) devra permettre aux joueurs de gérer leurs tokens, de rejoindre les parties et de suivre en temps réel le déroulement du jeu.
+La communication (optionnelle, par chat ou via des indicateurs non verbaux) peut être intégrée, en respectant la décentralisation et la confidentialité des échanges.
+5. Économie et Gouvernance
+Gestion des Tokens LIE :
+
+Les tokens servent à miser pour jouer et représentent une valeur d’entrée dans le jeu.
+L’économie interne devra être pensée pour éviter la dilution des tokens et encourager une circulation contrôlée.
+Les joueurs pourraient échanger des LIE contre des ETH via un mécanisme intégré, créant ainsi un marché secondaire.
+Gouvernance Décentralisée (optionnelle) :
+
+À terme, la gestion du jeu (mises à jour, règles de redistribution, ajout de nouveaux modes de jeu) pourrait être confiée à un DAO, permettant à la communauté de voter sur les modifications et d’assurer une transparence totale.
