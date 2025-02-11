@@ -30,7 +30,7 @@ contract LiarsGameManager is Ownable {
     mapping(bytes32 => uint256) private codeHashToLobbyId;
     mapping(uint256 => mapping(address => bool)) private playerInLobby;
     IERC20 public liarsToken;
-    Clones public clones;
+    address public implementationContract;
 
     // Events
     event LobbyCreated(uint256 indexed lobbyId, bytes32 codeHash, address indexed lobbyContract);
@@ -62,7 +62,7 @@ contract LiarsGameManager is Ownable {
      * @dev Sets the implementation address for clones
      */
     function setImplementation(address _implementation) external onlyOwner {
-        clones.setImplementation(_implementation);
+        implementationContract = _implementation;
     }
 
     /**
@@ -79,12 +79,19 @@ contract LiarsGameManager is Ownable {
         require(maxPlayers >= MIN_PLAYERS && maxPlayers <= MAX_PLAYERS, "Invalid player count");
         require(bytes(code).length > 0, "Code cannot be empty");
         require(stake > 0, "Stake must be greater than zero");
+        require(implementationContract != address(0), "Implementation not set");
 
         bytes32 codeHash = keccak256(abi.encodePacked(code));
         require(codeHashToLobbyId[codeHash] == 0, "Code already in use");
 
         lobbyCount++;
         uint256 lobbyId = lobbyCount;
+
+        // Deploy a new LiarsLobby contract using clones
+        address lobbyContract = Clones.clone(implementationContract);
+        
+        address[] memory initialPlayers = new address[](0);
+        LiarsLobby(lobbyContract).initialize(initialPlayers, address(liarsToken));
 
         Lobby storage newLobby = lobbies[lobbyId];
         newLobby.id = lobbyId;
@@ -93,9 +100,6 @@ contract LiarsGameManager is Ownable {
         newLobby.createdAt = block.timestamp;
         newLobby.maxPlayers = maxPlayers;
         newLobby.stake = stake;
-
-        // Deploy a new LiarsLobby contract using clones
-        address lobbyContract = clones.createClone(lobbyId);
         newLobby.lobbyContract = lobbyContract;
 
         codeHashToLobbyId[codeHash] = lobbyId;

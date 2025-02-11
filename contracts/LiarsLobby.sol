@@ -43,13 +43,19 @@ contract LiarsLobby is Ownable {
     event EmergencyWithdrawal();
 
     /**
-     * @dev Constructor initializes the lobby with an initial set of players.
-     * @param _players The addresses of players who joined the lobby.
-     * @param _liarsToken The address of the LiarsToken contract.
+     * @dev Constructor becomes empty since we'll use initialize for clones
      */
-    constructor(address[] memory _players, address _liarsToken) {
-        require(_players.length > 1, "At least 2 players required");
-        players = _players;
+    constructor() Ownable(msg.sender) {}
+
+    /**
+     * @dev Initialization function for clones
+     */
+    function initialize(address[] memory _players, address _liarsToken) external {
+        require(address(liarsToken) == address(0), "Already initialized");
+        if (_players.length > 0) {
+            require(_players.length > 1, "At least 2 players required");
+            players = _players;
+        }
         state = LobbyState.Waiting;
         currentTurnIndex = 0;
         liarsToken = IERC20(_liarsToken);
@@ -203,7 +209,7 @@ contract LiarsLobby is Ownable {
      */
     function joinLobby(address player) external {
         require(state == LobbyState.Waiting, "Game already started");
-        require(!players.includes(player), "Player already in lobby");
+        require(!includes(player), "Player already in lobby");
         players.push(player);
     }
 
@@ -213,7 +219,7 @@ contract LiarsLobby is Ownable {
      */
     function leaveLobby(address player) external {
         require(state == LobbyState.Waiting, "Game already started");
-        require(players.includes(player), "Player not in lobby");
+        require(includes(player), "Player not in lobby");
         // Remove player from the players array
         for (uint256 i = 0; i < players.length; i++) {
             if (players[i] == player) {
@@ -226,5 +232,15 @@ contract LiarsLobby is Ownable {
         uint256 stake = stakes[player];
         require(liarsToken.transfer(player, stake), "Token transfer failed");
         stakes[player] = 0;
+    }
+
+    // Add helper function for includes check
+    function includes(address player) private view returns (bool) {
+        for (uint i = 0; i < players.length; i++) {
+            if (players[i] == player) {
+                return true;
+            }
+        }
+        return false;
     }
 }
