@@ -2,6 +2,7 @@
 pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract LiarsLobby is Ownable {
     // Define possible states for a lobby.
@@ -27,6 +28,9 @@ contract LiarsLobby is Ownable {
     // Mapping to record stakes deposited by each player.
     mapping(address => uint256) public stakes;
 
+    // Address of the LiarsToken contract.
+    IERC20 public liarsToken;
+
     // EVENTS
     event GameStarted(bytes32 gameReference);
     event StakeDeposited(address indexed player, uint256 amount);
@@ -41,12 +45,14 @@ contract LiarsLobby is Ownable {
     /**
      * @dev Constructor initializes the lobby with an initial set of players.
      * @param _players The addresses of players who joined the lobby.
+     * @param _liarsToken The address of the LiarsToken contract.
      */
-    constructor(address[] memory _players) {
+    constructor(address[] memory _players, address _liarsToken) {
         require(_players.length > 1, "At least 2 players required");
         players = _players;
         state = LobbyState.Waiting;
         currentTurnIndex = 0;
+        liarsToken = IERC20(_liarsToken);
     }
 
     /**
@@ -64,12 +70,11 @@ contract LiarsLobby is Ownable {
 
     /**
      * @dev Allows a player to deposit their stake.
-     * In a complete implementation, tokens would be transferred from the player to the contract.
      * @param amount The amount of tokens to stake.
      */
     function depositStake(uint256 amount) external {
         require(state == LobbyState.Waiting || state == LobbyState.InGame, "Game is not active");
-        // Record the stake (token transfer logic should be integrated in a full version)
+        require(liarsToken.transferFrom(msg.sender, address(this), amount), "Token transfer failed");
         stakes[msg.sender] += amount;
         emit StakeDeposited(msg.sender, amount);
     }
@@ -156,19 +161,19 @@ contract LiarsLobby is Ownable {
         require(state == LobbyState.InGame, "Game is not in progress");
         address winner = players[0];
         uint256 minLoss = roundsLost[winner];
-        for (uint i = 1; i < players.length; i++) {
+        for (uint256 i = 1; i < players.length; i++) {
             if (roundsLost[players[i]] < minLoss) {
                 minLoss = roundsLost[players[i]];
                 winner = players[i];
             }
         }
         uint256 totalPot = 0;
-        for (uint i = 0; i < players.length; i++) {
+        for (uint256 i = 0; i < players.length; i++) {
             totalPot += stakes[players[i]];
         }
+        require(liarsToken.transfer(winner, totalPot), "Token transfer failed");
         emit RewardsDistributed(winner, totalPot);
         state = LobbyState.Ended;
-        // In a full implementation, token transfers would send the rewards to the winner.
     }
 
     /**
@@ -176,7 +181,7 @@ contract LiarsLobby is Ownable {
      * Only callable by the contract owner.
      */
     function emergencyWithdraw() external onlyOwner {
-        for (uint i = 0; i < players.length; i++) {
+        for (uint256 i = 0; i < players.length; i++) {
             stakes[players[i]] = 0;
         }
         state = LobbyState.Ended;
@@ -191,6 +196,35 @@ contract LiarsLobby is Ownable {
     function updateGameState(bytes32 ipfsHash) external {
         emit GameStateUpdated(ipfsHash);
     }
-}
 
+    /**
+     * @dev Allows a player to join the lobby.
+     * @param player The address of the player joining the lobby.
+     */
+    function joinLobby(address player) external {
+        require(state == LobbyState.Waiting, "Game already started");
+        require(!players.includes(player), "Player already in lobby");
+        players.push(player);
+    }
+
+    /**
+     * @dev Allows a player to leave the lobby.
+     * @param player The address of the player leaving the lobby.
+     */
+    function leaveLobby(address player) external {
+        require(state == LobbyState.Waiting, "Game already started");
+        require(players.includes(player), "Player not in lobby");
+        // Remove player from the players array
+        for (uint256 i = 0; i < players.length; i++) {
+            if (players[i] == player) {
+                players[i] = players[players.length - 1];
+                players.pop();
+                break;
+            }
+        }
+        // Return stake to the player
+        uint256 stake = stakes[player];
+        require(liarsToken.transfer(player, stake), "Token transfer failed");
+        stakes[player] = 0;
+    }
 }

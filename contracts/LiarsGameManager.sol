@@ -4,6 +4,7 @@ pragma solidity ^0.8.19;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/proxy/Clones.sol";
+import "./LiarsLobby.sol";
 
 contract LiarsGameManager is Ownable {
     constructor() Ownable(msg.sender) {}
@@ -21,6 +22,7 @@ contract LiarsGameManager is Ownable {
         uint256 createdAt;
         uint8 maxPlayers;
         uint256 stake;
+        address lobbyContract; // Address of the LiarsLobby contract
     }
 
     uint256 public lobbyCount;
@@ -28,13 +30,15 @@ contract LiarsGameManager is Ownable {
     mapping(bytes32 => uint256) private codeHashToLobbyId;
     mapping(uint256 => mapping(address => bool)) private playerInLobby;
     IERC20 public liarsToken;
+    Clones public clones;
 
     // Events
-    event LobbyCreated(uint256 indexed lobbyId, bytes32 codeHash);
+    event LobbyCreated(uint256 indexed lobbyId, bytes32 codeHash, address indexed lobbyContract);
     event PlayerJoined(uint256 indexed lobbyId, address indexed player, bytes32 codeHash);
     event PlayerLeft(uint256 indexed lobbyId, address indexed player);
     event GameStarted(uint256 indexed lobbyId);
     event StakeSet(uint256 indexed lobbyId, uint256 stake);
+    event RewardsDistributed(uint256 indexed lobbyId, address indexed winner, uint256 rewardAmount);
 
     // Modifiers
     modifier validLobbyId(uint256 lobbyId) {
@@ -52,6 +56,13 @@ contract LiarsGameManager is Ownable {
      */
     function setLiarsToken(address _liarsToken) external onlyOwner {
         liarsToken = IERC20(_liarsToken);
+    }
+
+    /**
+     * @dev Sets the implementation address for clones
+     */
+    function setImplementation(address _implementation) external onlyOwner {
+        clones.setImplementation(_implementation);
     }
 
     /**
@@ -83,9 +94,13 @@ contract LiarsGameManager is Ownable {
         newLobby.maxPlayers = maxPlayers;
         newLobby.stake = stake;
 
+        // Deploy a new LiarsLobby contract using clones
+        address lobbyContract = clones.createClone(lobbyId);
+        newLobby.lobbyContract = lobbyContract;
+
         codeHashToLobbyId[codeHash] = lobbyId;
 
-        emit LobbyCreated(lobbyId, codeHash);
+        emit LobbyCreated(lobbyId, codeHash, lobbyContract);
         emit StakeSet(lobbyId, stake);
         return lobbyId;
     }
@@ -149,6 +164,25 @@ contract LiarsGameManager is Ownable {
 
         lobby.state = LobbyState.InGame;
         emit GameStarted(lobbyId);
+
+        // Call the startGame function on the LiarsLobby contract
+        LiarsLobby(lobby.lobbyContract).startGame();
+    }
+
+    /**
+     * @dev Distributes rewards to the winner
+     * @param lobbyId The identifier of the lobby
+     * @param winner The address of the winner
+     */
+    function distributeRewards(uint256 lobbyId, address winner) external validLobbyId(lobbyId) {
+        Lobby storage lobby = lobbies[lobbyId];
+        require(lobby.state == LobbyState.InGame, "Game is not in progress");
+
+        uint256 totalStake = lobby.stake * lobby.players.length;
+        require(liarsToken.transfer(winner, totalStake), "Token transfer failed");
+
+        lobby.state = LobbyState.Closed;
+        emit RewardsDistributed(lobbyId, winner, totalStake);
     }
 
     // Internal functions
