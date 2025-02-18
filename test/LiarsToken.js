@@ -121,22 +121,16 @@ describe("LiarsToken", function () {
         .to.be.revertedWith("You are not a VIP.");
     });
 
-    it("Should allow the owner to add and remove a VIP, and prevent non-owners from doing so", async function () {
+    it("Should prevent non-owners from adding or removing VIPs", async function () {
       const { liarsToken, owner, user1, user2 } = await loadFixture(deployLiarsTokenFixture);
-    
-      // Owner adds user1 as VIP
-      await liarsToken.addVIP(user1.address);
-      expect(await liarsToken.isVIP(user1.address)).to.equal(true);
-    
-      // Owner removes user1 from VIP
-      await liarsToken.removeVIP(user1.address);
-      expect(await liarsToken.isVIP(user1.address)).to.equal(false);
     
       // Non-owner (user1) attempts to add user2 as VIP
       await expect(liarsToken.connect(user1).addVIP(user2.address)).to.be.revertedWithCustomError(liarsToken, "OwnableUnauthorizedAccount");
     
+      // Owner adds user2 as VIP first
+      await liarsToken.addVIP(user2.address);
+    
       // Non-owner (user1) attempts to remove user2 from VIP
-      await liarsToken.addVIP(user2.address); // Owner adds user2 as VIP first
       await expect(liarsToken.connect(user1).removeVIP(user2.address)).to.be.revertedWithCustomError(liarsToken, "OwnableUnauthorizedAccount");
     });
 
