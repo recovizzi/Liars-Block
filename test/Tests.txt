@@ -1,0 +1,10 @@
+Test Déploiement : 
+
+- Vérifie que le contrat LiarsToken a le nom "Liars Token" et le symbole "LIE" après le déploiement
+
+Test d'achat de Tokens : 
+
+- Vérifie que l'envoi de 1 ETH au contrat LiarsToken par un utilisateur (user1) permet de frapper (mint) 1000 tokens LIE.
+- Vérifie que la tentative d'achat de tokens sans envoyer d'ETH échoue avec le message "You must send ETH to purchase tokens."
+- Vérifiez que l'achat de tokens avec différents montants d'ETH fonctionne correctement.
+- Vérifiez que l'achat de tokens avec un montant d'ETH non divisible par 1 ETH fonctionne correctement.

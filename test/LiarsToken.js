@@ -32,6 +32,29 @@ describe("LiarsToken", function () {
       await expect(liarsToken.connect(user1).buyTokens({ value: 0 }))
         .to.be.revertedWith("You must send ETH to purchase tokens.");
     });
+
+    it("Should mint tokens correctly for different ETH amounts", async function () {
+      const { liarsToken, user1 } = await loadFixture(deployLiarsTokenFixture);
+      // Sending 0.5 ETH should mint 500 tokens
+      await liarsToken.connect(user1).buyTokens({ value: ethers.parseEther("0.5") });
+      expect(await liarsToken.balanceOf(user1.address)).to.equal(ethers.parseEther("500"));
+
+      // Sending 2 ETH should mint 2000 tokens
+      await liarsToken.connect(user1).buyTokens({ value: ethers.parseEther("2") });
+      expect(await liarsToken.balanceOf(user1.address)).to.equal(ethers.parseEther("2500")); // 500 + 2000
+    });
+
+    it("Should mint tokens correctly for non-divisible ETH amounts", async function () {
+      const { liarsToken, user1 } = await loadFixture(deployLiarsTokenFixture);
+      // Sending 1.5 ETH should mint 1500 tokens
+      await liarsToken.connect(user1).buyTokens({ value: ethers.parseEther("1.5") });
+      expect(await liarsToken.balanceOf(user1.address)).to.equal(ethers.parseEther("1500"));
+
+      // Sending 0.75 ETH should mint 750 tokens
+      await liarsToken.connect(user1).buyTokens({ value: ethers.parseEther("0.75") });
+      expect(await liarsToken.balanceOf(user1.address)).to.equal(ethers.parseEther("2250")); // 1500 + 750
+    });
+
   });
 
   describe("VIP Functions", function () {
