@@ -55,6 +55,27 @@ describe("LiarsToken", function () {
       expect(await liarsToken.balanceOf(user1.address)).to.equal(ethers.parseEther("2250")); // 1500 + 750
     });
 
+    it("Should mint tokens correctly for very small ETH amounts", async function () {
+      const { liarsToken, user1 } = await loadFixture(deployLiarsTokenFixture);
+      // Sending 0.0001 ETH should mint 0.1 tokens
+      await liarsToken.connect(user1).buyTokens({ value: ethers.parseEther("0.0001") });
+      expect(await liarsToken.balanceOf(user1.address)).to.equal(ethers.parseEther("0.1"));
+    });
+
+    it("Should mint tokens correctly for very large ETH amounts", async function () {
+      const { liarsToken, user1 } = await loadFixture(deployLiarsTokenFixture);
+      // Sending 100 ETH should mint 100,000 tokens
+      await liarsToken.connect(user1).buyTokens({ value: ethers.parseEther("100") });
+      expect(await liarsToken.balanceOf(user1.address)).to.equal(ethers.parseEther("100000"));
+    });
+
+    it("Should mint tokens correctly for high precision ETH amounts", async function () {
+      const { liarsToken, user1 } = await loadFixture(deployLiarsTokenFixture);
+      // Sending 0.123456789 ETH should mint 123.456789 tokens
+      await liarsToken.connect(user1).buyTokens({ value: ethers.parseEther("0.123456789") });
+      expect(await liarsToken.balanceOf(user1.address)).to.equal(ethers.parseEther("123.456789"));
+    });
+
   });
 
   describe("VIP Functions", function () {
@@ -99,6 +120,27 @@ describe("LiarsToken", function () {
       await expect(liarsToken.connect(user1).claimVipTokens())
         .to.be.revertedWith("You are not a VIP.");
     });
+
+    it("Should allow the owner to add and remove a VIP, and prevent non-owners from doing so", async function () {
+      const { liarsToken, owner, user1, user2 } = await loadFixture(deployLiarsTokenFixture);
+    
+      // Owner adds user1 as VIP
+      await liarsToken.addVIP(user1.address);
+      expect(await liarsToken.isVIP(user1.address)).to.equal(true);
+    
+      // Owner removes user1 from VIP
+      await liarsToken.removeVIP(user1.address);
+      expect(await liarsToken.isVIP(user1.address)).to.equal(false);
+    
+      // Non-owner (user1) attempts to add user2 as VIP
+      await expect(liarsToken.connect(user1).addVIP(user2.address)).to.be.revertedWithCustomError(liarsToken, "OwnableUnauthorizedAccount");
+    
+      // Non-owner (user1) attempts to remove user2 from VIP
+      await liarsToken.addVIP(user2.address); // Owner adds user2 as VIP first
+      await expect(liarsToken.connect(user1).removeVIP(user2.address)).to.be.revertedWithCustomError(liarsToken, "OwnableUnauthorizedAccount");
+    });
+
+
   });
 
   describe("Withdraw Function", function () {
