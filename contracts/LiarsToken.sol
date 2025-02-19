@@ -20,6 +20,8 @@ contract LiarsToken is ERC20, Ownable {
     uint256 public constant TOKENS_PER_ETH = 1000 * 10**18;
     uint256 public constant VIP_CLAIM_AMOUNT = 100 * 10**18;
     uint256 public constant VIP_CLAIM_INTERVAL = 10 minutes;
+    uint256 public constant MAX_TOKENS_PER_ACCOUNT = 50_000 * 10**18;
+
 
     // Mappings
     mapping(address => bool) public vipList;
@@ -35,6 +37,11 @@ contract LiarsToken is ERC20, Ownable {
         require(msg.value > 0, "You must send ETH to purchase tokens.");
         uint256 tokensToMint = (msg.value * TOKENS_PER_ETH) / 1 ether;
         
+        require(
+            balanceOf(msg.sender) + tokensToMint <= MAX_TOKENS_PER_ACCOUNT,
+            "Cannot exceed maximum token limit per account"
+        );
+
         // Create metadata for the new tokens
         uint256 tokenId = _tokenIdCounter++;
         address[] memory emptyArray = new address[](0);
@@ -105,6 +112,12 @@ contract LiarsToken is ERC20, Ownable {
         address to,
         uint256 amount
     ) internal virtual override {
+        if (to != address(0)) { // Skip burning
+            require(
+                balanceOf(to) + amount <= MAX_TOKENS_PER_ACCOUNT,
+                "Cannot exceed maximum token limit per account"
+            );
+        }
         uint256 tokenId = _tokenIdCounter - 1;
         if (from != address(0) && isVIPToken(tokenId)) {
             revert("VIP tokens are not transferable");

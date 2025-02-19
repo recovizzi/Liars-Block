@@ -1,0 +1,61 @@
+Tests de Création de Lobby (Lobby Creation) : 
+
+- Crée un lobby public avec :
+        - Code : "TEST123"
+        - Maximum de joueurs : 4
+        - Mise : 10 tokens,
+Vérifie que :
+    - L'événement LobbyCreated est émis
+    - L'ID du lobby est correct (1)
+    - Le hash du code est correct
+    - Les paramètres du lobby sont corrects (max joueurs et mise)
+
+
+Tests de Jointure de Lobby (Lobby Joining) : 
+
+- Test avec 1 joueur : vérifie que le jeu ne peut pas démarrer
+- Test avec 2 joueurs : vérifie le minimum requis pour démarrer
+- Test avec 3 joueurs : vérifie un cas intermédiaire valide
+- Test avec 4 joueurs : vérifie le cas maximum valide
+- Test avec tentative d'un 5ème joueur : vérifie la limitation du nombre de joueurs
+
+
+Tests de Gestion du Jeu (Game Management) : 
+
+- Crée un lobby pour 2 joueurs :
+    Processus de test :
+         1. Création du lobby
+         2. Approbation des tokens pour les deux joueurs
+         3. Les deux joueurs rejoignent le lobby
+         4. Vérifie le nombre de joueurs (2) et l'état du lobby (Waiting)
+         5. Démarre le jeu
+         6. Vérifie :
+            - L'événement GameStarted est émis
+            - L'état final du lobby est "InGame"
+
+Tests de Gestion des Lobbies Aléatoires
+
+- Teste la création automatique d'un lobby et vérifie les paramètres par défaut
+- Crée un lobby existant et vérifie que les nouveaux joueurs rejoignent ce lobby
+
+Tests de Sortie de Lobby
+
+- Teste le processus de sortie , vérifie le remboursement des stakes et confirme la suppression du joueur du lobby
+
+Tests de Distribution des Récompenses
+
+- Configure un jeu avec 2 joueurs ,vérifie la distribution correcte des récompenses et vérifie les balances avant/après
+
+Tests de Contrôle d'Accès
+
+- Teste les restrictions d'accès pour setLiarsToken : 
+        Seul le propriétaire du contrat peut modifier l'adresse du token
+        Un utilisateur non-propriétaire (user1) ne peut pas appeler setLiarsToken
+        La tentative échoue avec l'erreur OwnableUnauthorizedAccount
+        L'erreur contient l'adresse de l'utilisateur non autorisé
+
+- Teste les restrictions d'accès pour setImplementation : 
+        Seul le propriétaire peut modifier l'adresse d'implémentation du contrat
+        Un utilisateur non-propriétaire (user1) ne peut pas appeler setImplementation
+        La tentative échoue avec l'erreur OwnableUnauthorizedAccount
+        L'erreur contient l'adresse de l'utilisateur non autorisé

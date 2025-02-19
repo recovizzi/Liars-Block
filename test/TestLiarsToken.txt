@@ -9,7 +9,7 @@ Test d'achat de Tokens (Token Purchase) :
 - Vérifie que l'achat de tokens avec différents montants d'ETH fonctionne correctement.
 - Vérifie que l'achat de tokens avec un montant d'ETH non divisible par 1 ETH fonctionne correctement.
 - Vérifie que l'achat de tokens avec un très petit montant d'ETH (par exemple, 0.0001 ETH) fonctionne correctement.
-- Vérifie que l'achat de tokens avec un très grand montant d'ETH (par exemple, 100 ETH) fonctionne correctement.
+- Vérifie que l'achat de tokens avec un très grand montant d'ETH (par exemple, 100 ETH) ne fonctionne pas car dépasse la limite de 50 000 tokens par utilisateur.
 - Vérifie que l'achat de tokens avec un montant d'ETH ayant une précision élevée (par exemple, 0.123456789 ETH) fonctionne correctement.
 
 Test des Fonctions VIP : 
@@ -30,3 +30,12 @@ Test transfert de Tokens :
 
 - Vérifie que les transferts de tokens entre utilisateurs sont possibles. Le test inclut l'achat de tokens par le propriétaire, le transfert de tokens du propriétaire à un utilisateur (user1), et le transfert de tokens de cet utilisateur (user1) à un autre utilisateur (user2).
 - Vérifie qu'un utilisateur ne puisse pas échanger un token de type VIP. 
+
+Test limites balances token : 
+
+- Vérifie qu'un compte ne peut pas dépasser la limite maximale de 50 000 tokens via des achats. Le test inclut l'achat du maximum de tokens autorisé (50 000) par un utilisateur, puis une tentative d'achat supplémentaire qui doit échouer.
+
+- Vérifie qu'un compte ne peut pas dépasser la limite maximale de 50 000 tokens via des transferts. Le test inclut :
+  * L'achat de 50 000 tokens par le propriétaire
+  * L'achat de 49 000 tokens par un deuxième utilisateur
+  * Une tentative de transfert de 2 000 tokens supplémentaires vers le deuxième utilisateur qui doit échouer car cela dépasserait la limite de 50 000 tokens
