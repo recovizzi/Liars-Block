@@ -1,0 +1,54 @@
+Tests de Création de Lobby (Lobby Creation) : 
+
+- Crée un lobby public avec :
+        - Code : "TEST123"
+        - Maximum de joueurs : 4
+        - Mise : 10 tokens,
+Vérifie que :
+    - L'événement LobbyCreated est émis
+    - L'ID du lobby est correct (1)
+    - Le hash du code est correct
+    - Les paramètres du lobby sont corrects (max joueurs et mise)
+
+
+Tests de Jointure de Lobby (Lobby Joining) : 
+
+ - Crée un lobby pour 2 joueurs : 
+    Séquence de test :
+        1. Le premier joueur (créateur) rejoint
+        2. Le deuxième joueur rejoint
+        3. Vérifie que le lobby est plein (2 joueurs)
+        4. Tente de faire rejoindre un troisième joueur
+        5. Vérifie que la tentative échoue avec le message "Lobby is full"
+
+
+Tests de Gestion du Jeu (Game Management) : 
+
+- Crée un lobby pour 2 joueurs :
+    Processus de test :
+         1. Création du lobby
+         2. Approbation des tokens pour les deux joueurs
+         3. Les deux joueurs rejoignent le lobby
+         4. Vérifie le nombre de joueurs (2) et l'état du lobby (Waiting)
+         5. Démarre le jeu
+         6. Vérifie :
+            - L'événement GameStarted est émis
+            - L'état final du lobby est "InGame"
+
+Tests de Gestion des Lobbies Aléatoires
+
+- Teste la création automatique d'un lobby et vérifie les paramètres par défaut
+- Crée un lobby existant et vérifie que les nouveaux joueurs rejoignent ce lobby
+
+Tests de Sortie de Lobby
+
+- Teste le processus de sortie , vérifie le remboursement des stakes et confirme la suppression du joueur du lobby
+
+Tests de Distribution des Récompenses
+
+- Configure un jeu avec 2 joueurs ,vérifie la distribution correcte des récompenses et vérifie les balances avant/après
+
+Tests de Contrôle d'Accès
+
+- Teste les restrictions d'accès pour setLiarsToken
+- Teste les restrictions d'accès pour setImplementation

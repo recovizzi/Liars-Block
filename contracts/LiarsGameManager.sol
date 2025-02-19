@@ -116,12 +116,11 @@ contract LiarsGameManager is Ownable {
     function joinLobbyByCode(string calldata code) external {
         bytes32 codeHash = keccak256(abi.encodePacked(code));
         uint256 lobbyId = codeHashToLobbyId[codeHash];
-
-        if (lobbyId == 0 || lobbies[lobbyId].players.length >= lobbies[lobbyId].maxPlayers) {
-            // Redirect to a random lobby or create a new one
-            lobbyId = getOrCreateRandomLobby();
-        }
-
+        require(lobbyId != 0, "Lobby not found");
+    
+        Lobby storage lobby = lobbies[lobbyId];
+        require(lobby.players.length < lobby.maxPlayers, "Lobby is full");
+    
         _joinLobby(lobbyId);
     }
 
@@ -198,8 +197,13 @@ contract LiarsGameManager is Ownable {
         uint256 stake = lobby.stake;
         require(liarsToken.transferFrom(msg.sender, address(this), stake), "Token transfer failed");
 
+    // Add player to GameManager state
         lobby.players.push(msg.sender);
         playerInLobby[lobbyId][msg.sender] = true;
+
+    // Add player to LiarsLobby contract
+        LiarsLobby(lobby.lobbyContract).joinLobby(msg.sender);
+
         emit PlayerJoined(lobbyId, msg.sender, lobby.codeHash);
     }
 
