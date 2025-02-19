@@ -21,6 +21,12 @@ describe("LiarsLobby", function () {
         // Initialisation du lobby avec l'adresse du token
         await liarsLobby.initialize([], liarsTokenAddress);
 
+        // Mint des tokens pour les tests
+        const mintAmount = ethers.parseEther("1000");
+        await liarsToken.connect(player1).buyTokens({ value: ethers.parseEther("1") });
+        await liarsToken.connect(player2).buyTokens({ value: ethers.parseEther("1") });
+        await liarsToken.connect(player3).buyTokens({ value: ethers.parseEther("1") });
+
         return { 
             liarsLobby, 
             liarsToken, 
@@ -30,7 +36,8 @@ describe("LiarsLobby", function () {
             player1, 
             player2, 
             player3, 
-            others 
+            others,
+            mintAmount 
         };
     }
 
@@ -77,28 +84,144 @@ describe("LiarsLobby", function () {
     describe("Lobby Management", function () {
         it("should allow players to join lobby", async function () {
             const { liarsLobby, player1 } = await loadFixture(deployFixture);
+            
+            // Rejoindre le lobby
             await liarsLobby.joinLobby(player1.address);
-            expect(await liarsLobby.includes(player1.address)).to.be.true;
+            
+            // Vérifier la présence dans la liste des joueurs
+            const players = await liarsLobby.getPlayerList();
+            expect(players).to.include(player1.address);
         });
 
         it("should prevent players from joining twice", async function () {
-            // TODO: Tester qu'un joueur ne peut pas rejoindre le lobby plusieurs fois.
+            const { liarsLobby, player1 } = await loadFixture(deployFixture);
+            
+            // Premier join
+            await liarsLobby.joinLobby(player1.address);
+            
+            // Deuxième tentative doit échouer
+            await expect(
+                liarsLobby.joinLobby(player1.address)
+            ).to.be.revertedWith("Player already in lobby");
         });
 
         it("should allow players to leave lobby", async function () {
-            // TODO: Vérifier la fonctionnalité de sortie du lobby.
-        });
-
-        it("should return correct player list", async function () {
-            // TODO: Contrôler que la liste des joueurs est bien mise à jour.
-        });
-
-        it("should prevent joining after game starts", async function () {
-            // TODO: S'assurer qu'après le démarrage du jeu, plus aucun joueur ne peut rejoindre.
+            const { liarsLobby, liarsToken, player1 } = await loadFixture(deployFixture);
+            
+            // Setup initial
+            const stakeAmount = ethers.parseEther("100");
+            await liarsToken.connect(player1).approve(await liarsLobby.getAddress(), stakeAmount);
+            
+            // Join et stake
+            await liarsLobby.joinLobby(player1.address);
+            await liarsLobby.connect(player1).depositStake(stakeAmount);
+            
+            // Leave
+            await liarsLobby.leaveLobby(player1.address);
+            
+            // Vérification
+            const players = await liarsLobby.getPlayerList();
+            expect(players).to.not.include(player1.address);
         });
 
         it("should return stake when leaving", async function () {
-            // TODO: Vérifier que le stake est retourné correctement lors d'une sortie.
+            const { liarsLobby, liarsToken, player1 } = await loadFixture(deployFixture);
+            const stakeAmount = ethers.parseEther("100");
+            
+            // Setup
+            await liarsToken.connect(player1).approve(await liarsLobby.getAddress(), stakeAmount);
+            await liarsLobby.joinLobby(player1.address);
+            
+            // Récupérer le solde initial
+            const balanceBefore = await liarsToken.balanceOf(player1.address);
+            
+            // Déposer la mise
+            await liarsLobby.connect(player1).depositStake(stakeAmount);
+            
+            // Quitter le lobby
+            await liarsLobby.leaveLobby(player1.address);
+            
+            // Vérifier le solde final
+            const balanceAfter = await liarsToken.balanceOf(player1.address);
+            expect(balanceAfter).to.equal(balanceBefore);
+        });
+
+        it("should return correct player list", async function () {
+            const { liarsLobby, player1, player2, player3 } = await loadFixture(deployFixture);
+            
+            // Ajouter plusieurs joueurs
+            await liarsLobby.joinLobby(player1.address);
+            await liarsLobby.joinLobby(player2.address);
+            await liarsLobby.joinLobby(player3.address);
+            
+            // Vérifier la liste
+            const players = await liarsLobby.getPlayerList();
+            expect(players).to.have.lengthOf(3);
+            expect(players).to.include(player1.address);
+            expect(players).to.include(player2.address);
+            expect(players).to.include(player3.address);
+        });
+
+        it("should prevent joining after game starts", async function () {
+            const { liarsLobby, player1, player2, player3 } = await loadFixture(deployFixture);
+            
+            // Ajouter le minimum de joueurs et démarrer la partie
+            await liarsLobby.joinLobby(player1.address);
+            await liarsLobby.joinLobby(player2.address);
+            await liarsLobby.startGame();
+            
+            // Tenter d'ajouter un joueur après le début
+            await expect(
+                liarsLobby.joinLobby(player3.address)
+            ).to.be.revertedWith("Game already started");
+        });
+
+        it("should emit events when players join and leave", async function () {
+            const { liarsLobby, player1 } = await loadFixture(deployFixture);
+            
+            // Vérifier l'événement lors de l'ajout
+            await expect(liarsLobby.joinLobby(player1.address))
+                .to.emit(liarsLobby, "PlayerJoined")
+                .withArgs(player1.address);
+            
+            // Vérifier l'événement lors du départ
+            await expect(liarsLobby.leaveLobby(player1.address))
+                .to.emit(liarsLobby, "PlayerLeft")
+                .withArgs(player1.address);
+        });
+
+        it("should respect max stake limit", async function () {
+            const { liarsLobby, liarsToken, player1 } = await loadFixture(deployFixture);
+            const maxStake = await liarsLobby.MAX_STAKE();
+            const overMaxStake = maxStake + BigInt(1);
+            
+            await liarsLobby.joinLobby(player1.address);
+            await liarsToken.connect(player1).approve(liarsLobby.getAddress(), overMaxStake);
+            
+            await expect(
+                liarsLobby.connect(player1).depositStake(overMaxStake)
+            ).to.be.revertedWith("Stake exceeds maximum limit");
+        });
+
+        it("should handle player defeat when leaving during game", async function () {
+            const { liarsLobby, liarsToken, player1, player2 } = await loadFixture(deployFixture);
+            const stakeAmount = ethers.parseEther("100");
+            
+            // Setup game
+            await liarsToken.connect(player1).approve(liarsLobby.getAddress(), stakeAmount);
+            await liarsLobby.joinLobby(player1.address);
+            await liarsLobby.joinLobby(player2.address);
+            await liarsLobby.connect(player1).depositStake(stakeAmount);
+            await liarsLobby.startGame();
+            
+            // Leave during game should trigger defeat
+            await expect(liarsLobby.leaveLobby(player1.address))
+                .to.emit(liarsLobby, "PlayerDefeated")
+                .withArgs(player1.address, stakeAmount);
+            
+            // Verify stake is not returned
+            const finalBalance = await liarsToken.balanceOf(player1.address);
+            expect(finalBalance).to.equal(await liarsToken.balanceOf(player1.address));
         });
     });
 

@@ -5,6 +5,12 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract LiarsLobby is Ownable {
+    // Ajouter la constante pour la limite de mise
+    uint256 public constant MAX_STAKE = 1000 * 1e18;  // 1000 tokens avec 18 décimales
+
+    // Ajouter l'événement pour la défaite
+    event PlayerDefeated(address indexed player, uint256 stakeLost);
+
     // Define possible states for a lobby.
     enum LobbyState { Waiting, InGame, Ended }
     LobbyState public state;
@@ -41,6 +47,8 @@ contract LiarsLobby is Ownable {
     event RewardsDistributed(address winner, uint256 rewardAmount);
     event GameStateUpdated(bytes32 ipfsHash);
     event EmergencyWithdrawal();
+    event PlayerJoined(address indexed player);
+    event PlayerLeft(address indexed player);
 
     /**
      * @dev Constructor becomes empty since we'll use initialize for clones
@@ -80,6 +88,7 @@ contract LiarsLobby is Ownable {
      */
     function depositStake(uint256 amount) external {
         require(state == LobbyState.Waiting || state == LobbyState.InGame, "Game is not active");
+        require(amount <= MAX_STAKE, "Stake exceeds maximum limit");  // Ajout de la vérification
         require(liarsToken.transferFrom(msg.sender, address(this), amount), "Token transfer failed");
         stakes[msg.sender] += amount;
         emit StakeDeposited(msg.sender, amount);
@@ -211,6 +220,7 @@ contract LiarsLobby is Ownable {
         require(state == LobbyState.Waiting, "Game already started");
         require(!includes(player), "Player already in lobby");
         players.push(player);
+        emit PlayerJoined(player);
     }
 
     /**
@@ -218,8 +228,8 @@ contract LiarsLobby is Ownable {
      * @param player The address of the player leaving the lobby.
      */
     function leaveLobby(address player) external {
-        require(state == LobbyState.Waiting, "Game already started");
         require(includes(player), "Player not in lobby");
+        
         // Remove player from the players array
         for (uint256 i = 0; i < players.length; i++) {
             if (players[i] == player) {
@@ -228,10 +238,24 @@ contract LiarsLobby is Ownable {
                 break;
             }
         }
-        // Return stake to the player
+
         uint256 stake = stakes[player];
-        require(liarsToken.transfer(player, stake), "Token transfer failed");
         stakes[player] = 0;
+
+        if (state == LobbyState.Waiting) {
+            // Si le jeu n'a pas commencé, remboursement de la mise
+            if (stake > 0) {
+                require(liarsToken.transfer(player, stake), "Token transfer failed");
+            }
+        } else {
+            // Si le jeu a commencé, le joueur perd sa mise
+            if (stake > 0) {
+                emit PlayerDefeated(player, stake);
+                // La mise reste dans le pot pour les autres joueurs
+            }
+        }
+        
+        emit PlayerLeft(player);
     }
 
     // Add helper function for includes check
