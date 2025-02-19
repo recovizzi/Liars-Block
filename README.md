@@ -96,7 +96,7 @@ npx hardhat test
 There are two ways to deploy the contract:
 
 1. **Via the Ignition Module**  
-   The deployment module for `LiarsToken` is defined in the folder `ignition/modules/LiarsToken.js`.
+   The deployment module for `LiarsToken` is defined in the folder `ignition/modules/LiarsTokenModule.js`.
 
    To deploy on the localhost network, run:
    ```bash
@@ -180,3 +180,4 @@ This project is licensed under the MIT License. See the [LICENSE](./LICENSE) fil
 If you have any questions or suggestions, please open an issue on GitHub or contact me at [your email].
 
 ---
+

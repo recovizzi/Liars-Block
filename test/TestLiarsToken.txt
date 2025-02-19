@@ -1,0 +1,32 @@
+Test Deployment : 
+
+- Vérifie que le contrat LiarsToken a le nom "Liars Token" et le symbole "LIE" après le déploiement
+
+Test d'achat de Tokens (Token Purchase) : 
+
+- Vérifie que l'envoi de 1 ETH au contrat LiarsToken par un utilisateur (user1) permet de frapper (mint) 1000 tokens LIE.
+- Vérifie que la tentative d'achat de tokens sans envoyer d'ETH échoue avec le message "You must send ETH to purchase tokens."
+- Vérifie que l'achat de tokens avec différents montants d'ETH fonctionne correctement.
+- Vérifie que l'achat de tokens avec un montant d'ETH non divisible par 1 ETH fonctionne correctement.
+- Vérifie que l'achat de tokens avec un très petit montant d'ETH (par exemple, 0.0001 ETH) fonctionne correctement.
+- Vérifie que l'achat de tokens avec un très grand montant d'ETH (par exemple, 100 ETH) fonctionne correctement.
+- Vérifie que l'achat de tokens avec un montant d'ETH ayant une précision élevée (par exemple, 0.123456789 ETH) fonctionne correctement.
+
+Test des Fonctions VIP : 
+
+- Vérifie que le propriétaire du contrat peut ajouter et retirer un utilisateur (user1) de la liste VIP.
+- Vérifie qu'un utilisateur VIP peut réclamer des tokens toutes les 10 minutes. Le test inclut une première réclamation réussie, une tentative de réclamation immédiate échouée, et une réclamation réussie après une augmentation du temps de 10 minutes.
+- Vérifie que la fonction timeUntilNextClaim retourne le temps restant avant que l'utilisateur VIP puisse réclamer des tokens à nouveau. Le test inclut une vérification avant et après une augmentation du temps de 10 minutes.
+- Vérifie qu'un utilisateur non-VIP ne peut pas réclamer des tokens VIP et que la tentative échoue avec le message "You are not a VIP."
+- Vérifie que les non-propriétaires ne peuvent pas ajouter ou retirer des utilisateurs de la liste VIP.
+
+Test de la fonction de retrait de token : 
+
+- Vérifie que le propriétaire peut retirer les ETH et que son solde augmente après le retrait
+- Vérifie qu'un utilisateur non-propriétaire ne peut pas retirer les ETH
+- Vérifie que le retrait échoue si le contrat ne contient pas d'ETH
+    
+Test transfert de Tokens : 
+
+- Vérifie que les transferts de tokens entre utilisateurs sont possibles. Le test inclut l'achat de tokens par le propriétaire, le transfert de tokens du propriétaire à un utilisateur (user1), et le transfert de tokens de cet utilisateur (user1) à un autre utilisateur (user2).
+- Vérifie qu'un utilisateur ne puisse pas échanger un token de type VIP. 
