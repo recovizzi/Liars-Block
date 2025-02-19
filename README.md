@@ -58,7 +58,6 @@ Clone the repository and install the dependencies:
 git clone https://github.com/your-username/liarsblock.git
 cd liarsblock
 npm install
-ipfs daemon
 ```
 
 Key **devDependencies** include:

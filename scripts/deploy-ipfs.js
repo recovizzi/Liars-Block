@@ -1,3 +1,4 @@
+const { exec } = require('child_process');
 const IPFS = require('ipfs');
 
 let ipfsNode;
@@ -5,6 +6,19 @@ let ipfsNode;
 // Start le noeud IPFS
 async function startIPFSNode() {
     try {
+        // Démarre le démon IPFS
+        exec('ipfs daemon', (error, stdout, stderr) => {
+            if (error) {
+            console.error(`Error starting IPFS daemon: ${error.message}`);
+            return;
+            }
+            if (stderr) {
+            console.error(`IPFS daemon stderr: ${stderr}`);
+            return;
+            }
+            console.log(`IPFS daemon stdout: ${stdout}`);
+        });
+        
         // Crée un nœud IPFS
         ipfsNode = await IPFS.create();
 
