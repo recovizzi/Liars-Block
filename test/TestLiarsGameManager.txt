@@ -13,13 +13,11 @@ Vérifie que :
 
 Tests de Jointure de Lobby (Lobby Joining) : 
 
- - Crée un lobby pour 2 joueurs : 
-    Séquence de test :
-        1. Le premier joueur (créateur) rejoint
-        2. Le deuxième joueur rejoint
-        3. Vérifie que le lobby est plein (2 joueurs)
-        4. Tente de faire rejoindre un troisième joueur
-        5. Vérifie que la tentative échoue avec le message "Lobby is full"
+- Test avec 1 joueur : vérifie que le jeu ne peut pas démarrer
+- Test avec 2 joueurs : vérifie le minimum requis pour démarrer
+- Test avec 3 joueurs : vérifie un cas intermédiaire valide
+- Test avec 4 joueurs : vérifie le cas maximum valide
+- Test avec tentative d'un 5ème joueur : vérifie la limitation du nombre de joueurs
 
 
 Tests de Gestion du Jeu (Game Management) : 
@@ -50,5 +48,14 @@ Tests de Distribution des Récompenses
 
 Tests de Contrôle d'Accès
 
-- Teste les restrictions d'accès pour setLiarsToken
-- Teste les restrictions d'accès pour setImplementation
+- Teste les restrictions d'accès pour setLiarsToken : 
+        Seul le propriétaire du contrat peut modifier l'adresse du token
+        Un utilisateur non-propriétaire (user1) ne peut pas appeler setLiarsToken
+        La tentative échoue avec l'erreur OwnableUnauthorizedAccount
+        L'erreur contient l'adresse de l'utilisateur non autorisé
+
+- Teste les restrictions d'accès pour setImplementation : 
+        Seul le propriétaire peut modifier l'adresse d'implémentation du contrat
+        Un utilisateur non-propriétaire (user1) ne peut pas appeler setImplementation
+        La tentative échoue avec l'erreur OwnableUnauthorizedAccount
+        L'erreur contient l'adresse de l'utilisateur non autorisé

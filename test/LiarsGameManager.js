@@ -64,32 +64,121 @@ describe("LiarsGameManager", function () {
     });
 
     describe("Lobby Joining", function () {
-        it("Should prevent joining full lobbies", async function () {
-            const { gameManager, liarsToken, user1, user2, user3 } = 
-                await loadFixture(deployLiarsGameManagerFixture);
+        it("Should not start game with only one player", async function () {
+            const { gameManager, liarsToken, user1 } = await loadFixture(deployLiarsGameManagerFixture);
             
-            // Create a 2-player lobby
+            // Create a 4-player lobby
             const code = "TEST123";
             const stake = ethers.parseEther("10");
-            await gameManager.connect(user1).createPublicLobby(code, 2, stake);
+            await gameManager.connect(user1).createPublicLobby(code, 4, stake);
             
-            // First player (creator) should join automatically
+            // First player joins
             await liarsToken.connect(user1).approve(gameManager.getAddress(), stake);
             await gameManager.connect(user1).joinLobbyByCode(code);
             
-            // Second player joins
+            // Verify one player in lobby
+            const lobbyDetails = await gameManager.getLobbyDetails(1);
+            expect(lobbyDetails.players.length).to.equal(1);
+            
+            // Try to start game
+            await expect(
+                gameManager.connect(user1).startGame(1)
+            ).to.be.revertedWith("Not enough players");
+        });
+    
+        it("Should allow game with minimum players (2)", async function () {
+            const { gameManager, liarsToken, user1, user2 } = await loadFixture(deployLiarsGameManagerFixture);
+            
+            const code = "TEST123";
+            const stake = ethers.parseEther("10");
+            await gameManager.connect(user1).createPublicLobby(code, 4, stake);
+            
+            // Two players join
+            await liarsToken.connect(user1).approve(gameManager.getAddress(), stake);
             await liarsToken.connect(user2).approve(gameManager.getAddress(), stake);
+            await gameManager.connect(user1).joinLobbyByCode(code);
             await gameManager.connect(user2).joinLobbyByCode(code);
             
-            // Verify lobby is now full
+            // Verify two players in lobby
             const lobbyDetails = await gameManager.getLobbyDetails(1);
             expect(lobbyDetails.players.length).to.equal(2);
             
-            // Third player tries to join full lobby
-            await liarsToken.connect(user3).approve(gameManager.getAddress(), stake);
+            // Start game should work
+            await expect(gameManager.connect(user1).startGame(1))
+                .to.emit(gameManager, "GameStarted")
+                .withArgs(1);
+        });
+    
+        it("Should allow game with three players", async function () {
+            const { gameManager, liarsToken, user1, user2, user3 } = await loadFixture(deployLiarsGameManagerFixture);
+            
+            const code = "TEST123";
+            const stake = ethers.parseEther("10");
+            await gameManager.connect(user1).createPublicLobby(code, 4, stake);
+            
+            // Three players join
+            for (const user of [user1, user2, user3]) {
+                await liarsToken.connect(user).approve(gameManager.getAddress(), stake);
+                await gameManager.connect(user).joinLobbyByCode(code);
+            }
+            
+            // Verify three players in lobby
+            const lobbyDetails = await gameManager.getLobbyDetails(1);
+            expect(lobbyDetails.players.length).to.equal(3);
+            
+            // Start game should work
+            await expect(gameManager.connect(user1).startGame(1))
+                .to.emit(gameManager, "GameStarted")
+                .withArgs(1);
+        });
+    
+        it("Should allow game with maximum players (4)", async function () {
+            const { gameManager, liarsToken, user1, user2, user3, user4 } = 
+                await loadFixture(deployLiarsGameManagerFixture);
+            
+            const code = "TEST123";
+            const stake = ethers.parseEther("10");
+            await gameManager.connect(user1).createPublicLobby(code, 4, stake);
+            
+            // Four players join
+            for (const user of [user1, user2, user3, user4]) {
+                await liarsToken.connect(user).approve(gameManager.getAddress(), stake);
+                await gameManager.connect(user).joinLobbyByCode(code);
+            }
+            
+            // Verify four players in lobby
+            const lobbyDetails = await gameManager.getLobbyDetails(1);
+            expect(lobbyDetails.players.length).to.equal(4);
+            
+            // Start game should work
+            await expect(gameManager.connect(user1).startGame(1))
+                .to.emit(gameManager, "GameStarted")
+                .withArgs(1);
+        });
+    
+        it("Should prevent fifth player from joining", async function () {
+            const { gameManager, liarsToken, user1, user2, user3, user4, owner } = 
+                await loadFixture(deployLiarsGameManagerFixture);
+            
+            const code = "TEST123";
+            const stake = ethers.parseEther("10");
+            await gameManager.connect(user1).createPublicLobby(code, 4, stake);
+            
+            // First four players join
+            for (const user of [user1, user2, user3, user4]) {
+                await liarsToken.connect(user).approve(gameManager.getAddress(), stake);
+                await gameManager.connect(user).joinLobbyByCode(code);
+            }
+            
+            // Fifth player (owner) tries to join
+            await liarsToken.connect(owner).approve(gameManager.getAddress(), stake);
             await expect(
-                gameManager.connect(user3).joinLobbyByCode(code)
+                gameManager.connect(owner).joinLobbyByCode(code)
             ).to.be.revertedWith("Lobby is full");
+            
+            // Verify still only four players in lobby
+            const lobbyDetails = await gameManager.getLobbyDetails(1);
+            expect(lobbyDetails.players.length).to.equal(4);
         });
     });
 
