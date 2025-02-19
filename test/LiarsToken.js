@@ -70,9 +70,9 @@ describe("LiarsToken", function () {
 
     it("Should mint tokens correctly for very large ETH amounts", async function () {
       const { liarsToken, user1 } = await loadFixture(deployLiarsTokenFixture);
-      // Sending 100 ETH should mint 100,000 tokens
-      await liarsToken.connect(user1).buyTokens({ value: ethers.parseEther("100") });
-      expect(await liarsToken.balanceOf(user1.address)).to.equal(ethers.parseEther("100000"));
+      // Sending 50 ETH should mint 50,000 tokens (maximum allowed)
+      await liarsToken.connect(user1).buyTokens({ value: ethers.parseEther("50") });
+      expect(await liarsToken.balanceOf(user1.address)).to.equal(ethers.parseEther("50000"));
     });
 
     it("Should mint tokens correctly for high precision ETH amounts", async function () {
@@ -219,4 +219,41 @@ describe("LiarsToken", function () {
       ).to.be.revertedWith("VIP tokens are not transferable");
     });
   });
+
+  describe("Token Balance Limits", function () {
+    it("Should not allow accounts to exceed maximum token limit through purchases", async function () {
+      const { liarsToken, user1 } = await loadFixture(deployLiarsTokenFixture);
+      
+      // Buy maximum allowed tokens (50,000)
+      await liarsToken.connect(user1).buyTokens({ 
+        value: ethers.parseEther("50") // Will mint 50,000 tokens
+      });
+  
+      // Try to buy more tokens
+      await expect(
+        liarsToken.connect(user1).buyTokens({ value: ethers.parseEther("1") })
+      ).to.be.revertedWith("Cannot exceed maximum token limit per account");
+    });
+  
+    it("Should not allow accounts to exceed maximum token limit through transfers", async function () {
+      const { liarsToken, owner, user1, user2 } = await loadFixture(deployLiarsTokenFixture);
+      
+      // Owner buys 50,000 tokens (maximum allowed)
+      await liarsToken.connect(owner).buyTokens({ 
+        value: ethers.parseEther("50")
+      });
+  
+      // User2 buys 49,000 tokens
+      await liarsToken.connect(user2).buyTokens({ 
+        value: ethers.parseEther("49")
+      });
+  
+      // Try to transfer more tokens to user2 (which would exceed the limit)
+      await expect(
+        liarsToken.connect(owner).transfer(user2.address, ethers.parseEther("2000"))
+      ).to.be.revertedWith("Cannot exceed maximum token limit per account");
+    });
+  });
+
+
 });
