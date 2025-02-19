@@ -1,14 +1,20 @@
 const { time, loadFixture } = require("@nomicfoundation/hardhat-toolbox/network-helpers");
 const { expect } = require("chai");
+const { ethers } = require("hardhat");
 
 describe("LiarsToken", function () {
   async function deployLiarsTokenFixture() {
     const [owner, user1, user2] = await ethers.getSigners();
     const LiarsToken = await ethers.getContractFactory("LiarsToken");
     const liarsToken = await LiarsToken.deploy();
-    // Attendre que le contrat soit effectivement déployé afin que liarsToken.address soit défini
+    
+    // Assurez-vous que le contrat est bien déployé et récupérez l'adresse
     await liarsToken.waitForDeployment();
-    return { liarsToken, owner, user1, user2 };
+    const contractAddress = await liarsToken.getAddress(); // Utilisez getAddress() au lieu de .address
+  
+    console.log("Deployed contract at:", contractAddress); // Debug
+  
+    return { liarsToken, owner, user1, user2, contractAddress };
   }
 
   describe("Deployment", function () {
@@ -138,26 +144,51 @@ describe("LiarsToken", function () {
   });
 
   describe("Withdraw Function", function () {
-    it("Should allow only the owner to withdraw ETH", async function () {
-      const { liarsToken, owner, user1 } = await loadFixture(deployLiarsTokenFixture);
-      // User1 buys tokens, sending ETH to the contract.
-      await liarsToken.connect(user1).buyTokens({ value: ethers.parseEther("1") });
-      const contractBalance = await ethers.provider.getBalance(liarsToken.address);
-      expect(contractBalance).to.be.gt(0);
-      
-      // Non-owner attempting to withdraw should revert.
-      await expect(liarsToken.connect(user1).withdraw()).to.be.reverted;
-      
-      // Owner withdraws ETH.
-      const ownerBalanceBefore = await ethers.provider.getBalance(owner.address);
-      const tx = await liarsToken.withdraw();
-      const receipt = await tx.wait();
-      const gasUsed = receipt.gasUsed.mul(receipt.effectiveGasPrice);
-      const ownerBalanceAfter = await ethers.provider.getBalance(owner.address);
-      // The owner's balance should increase approximately by the contract balance (minus gas fees).
-      expect(ownerBalanceAfter).to.be.closeTo(ownerBalanceBefore.add(contractBalance), gasUsed);
+    beforeEach(async function () {
+        const { liarsToken, user1 } = await loadFixture(deployLiarsTokenFixture);
+        await liarsToken.connect(user1).buyTokens({ value: ethers.parseEther("1") });
     });
-  });
+
+    it("Should allow only the owner to withdraw ETH", async function () {
+        const { liarsToken, owner, user1 } = await loadFixture(deployLiarsTokenFixture);
+        
+        await liarsToken.connect(user1).buyTokens({ value: ethers.parseEther("1") });
+        
+        const contractAddress = await liarsToken.getAddress();
+        
+        const initialContractBalance = await ethers.provider.getBalance(contractAddress);
+        const initialOwnerBalance = await ethers.provider.getBalance(owner.address);
+        
+        const tx = await liarsToken.connect(owner).withdraw();
+        const receipt = await tx.wait();
+        
+        const finalContractBalance = await ethers.provider.getBalance(contractAddress);
+        const finalOwnerBalance = await ethers.provider.getBalance(owner.address);
+        
+        expect(finalContractBalance).to.equal(0n);
+        
+        expect(finalOwnerBalance).to.be.greaterThan(initialOwnerBalance);
+    });
+
+    it("Should revert when non-owner tries to withdraw", async function () {
+        const { liarsToken, user1 } = await loadFixture(deployLiarsTokenFixture);
+        
+        await expect(
+            liarsToken.connect(user1).withdraw()
+        ).to.be.revertedWithCustomError(
+            liarsToken,
+            "OwnableUnauthorizedAccount"
+        );
+    });
+
+    it("Should revert when there is no ETH to withdraw", async function () {
+        const { liarsToken, owner } = await loadFixture(deployLiarsTokenFixture);
+        
+        await expect(
+            liarsToken.connect(owner).withdraw()
+        ).to.be.revertedWith("No ETH");
+    });
+});
 
   describe("ERC20 Token Transfers", function () {
     it("Should allow transfers between users", async function () {

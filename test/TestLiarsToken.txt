@@ -22,8 +22,10 @@ Test des Fonctions VIP :
 
 Test de la fonction de retrait de token : 
 
-- Vérifie que seul le propriétaire du contrat peut retirer les ETH accumulés dans le contrat. Le test inclut une tentative échouée de retrait par un utilisateur non-propriétaire et une tentative réussie par le propriétaire, avec une vérification des soldes avant et après le retrait.
-
+- Vérifie que le propriétaire peut retirer les ETH et que son solde augmente après le retrait
+- Vérifie qu'un utilisateur non-propriétaire ne peut pas retirer les ETH
+- Vérifie que le retrait échoue si le contrat ne contient pas d'ETH
+    
 Test transfert de Tokens : 
 
 - Vérifie que les transferts de tokens entre utilisateurs sont possibles. Le test inclut l'achat de tokens par le propriétaire, le transfert de tokens du propriétaire à un utilisateur (user1), et le transfert de tokens de cet utilisateur (user1) à un autre utilisateur (user2).
