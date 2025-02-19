@@ -1,5 +1,5 @@
 const { exec } = require('child_process');
-const IPFS = require('ipfs');
+const { create } = require('ipfs-http-client');
 
 let ipfsNode;
 
@@ -38,11 +38,20 @@ async function stopIPFSNode() {
     }
     }
     
-    module.exports = {
-        startIPFSNode,
-        stopIPFSNode,
-        getIPFSNode: () => ipfsNode
-    };
+// Définir la fonction main
+async function main() {
+await startIPFSNode();
+}
+module.exports = {
+    startIPFSNode,
+    stopIPFSNode,
+    getIPFSNode: () => ipfsNode
+};
 
-// pour exécuter le script
-// $ node deploy-ipfs.js
+// Execute deployment
+main()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
