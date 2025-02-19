@@ -94,6 +94,24 @@ contract LiarsToken is ERC20, Ownable {
         return vipList[account];
     }
 
+    function isVIPToken(uint256 tokenId) internal view returns (bool) {
+        TokenMetadata storage metadata = tokenMetadata[tokenId];
+        return keccak256(bytes(metadata.tokenType)) == keccak256(bytes("VIP"));
+    }
+
+        // Override la fonction _transfer pour bloquer le transfert des tokens VIP
+    function _update(
+        address from,
+        address to,
+        uint256 amount
+    ) internal virtual override {
+        uint256 tokenId = _tokenIdCounter - 1;
+        if (from != address(0) && isVIPToken(tokenId)) {
+            revert("VIP tokens are not transferable");
+        }
+        super._update(from, to, amount);
+    }
+
     function timeUntilNextClaim(address account) external view returns (uint256) {
         if (block.timestamp >= lastClaimTime[account] + VIP_CLAIM_INTERVAL) {
             return 0;

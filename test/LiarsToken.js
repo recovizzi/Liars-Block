@@ -202,5 +202,21 @@ describe("LiarsToken", function () {
       await liarsToken.connect(user1).transfer(user2.address, ethers.parseEther("200"));
       expect(await liarsToken.balanceOf(user2.address)).to.equal(ethers.parseEther("200"));
     });
+
+    it("Should not allow transfer of VIP tokens", async function () {
+      const { liarsToken, owner, user1, user2 } = await loadFixture(deployLiarsTokenFixture);
+      
+      // Add user1 as VIP
+      await liarsToken.addVIP(user1.address);
+      
+      // User1 claims VIP tokens
+      await liarsToken.connect(user1).claimVipTokens();
+      const vipBalance = await liarsToken.balanceOf(user1.address);
+      
+      // Try to transfer VIP tokens to user2
+      await expect(
+        liarsToken.connect(user1).transfer(user2.address, vipBalance)
+      ).to.be.revertedWith("VIP tokens are not transferable");
+    });
   });
 });

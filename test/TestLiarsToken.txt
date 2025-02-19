@@ -29,3 +29,4 @@ Test de la fonction de retrait de token :
 Test transfert de Tokens : 
 
 - Vérifie que les transferts de tokens entre utilisateurs sont possibles. Le test inclut l'achat de tokens par le propriétaire, le transfert de tokens du propriétaire à un utilisateur (user1), et le transfert de tokens de cet utilisateur (user1) à un autre utilisateur (user2).
+- Vérifie qu'un utilisateur ne puisse pas échanger un token de type VIP. 
