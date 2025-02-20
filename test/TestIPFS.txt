@@ -1,10 +1,10 @@
 Vérifier que les dépendances sont installées : 
 
-npm install ipfs-http-client
+> npm install ipfs-http-client
 
 Avant de lancer les tests, dans un terminal : 
 
-ipfs daemon
+> ipfs daemon
 
 
 Test vérification mouvement stocker sur ipfs (Move Verification) : 

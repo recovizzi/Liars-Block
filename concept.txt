@@ -17,6 +17,7 @@ VIP & réapprovisionnement automatique : Une VIP list manuelle (gérée par l’
 
 Les tokens LIE pourront être échangés entre joueurs ou potentiellement listés sur des DEX, afin de créer une véritable économie dans le jeu.
 La conception doit veiller à limiter l’inflation des tokens en ajustant la formule de redistribution des gains (voir section sur le système de gains).
+
 2. Fonctionnalités et Gestion des Lobbies
 Création et Rejoindre une Partie
 Trois modes de connexion seront proposés :
@@ -63,6 +64,7 @@ Fin de Partie et Distribution des Gains :
 
 Le dernier joueur en vie remporte un pourcentage des mises totales, ajusté en fonction du nombre de joueurs, des mises individuelles et d’un système de pondération pour limiter la création excessive de tokens.
 La formule de distribution devra être soigneusement définie afin de préserver la rareté du token LIE tout en récompensant les risques pris par les joueurs.
+
 4. Aspects Sécuritaires et Performances
 Sécurité et Vérifiabilité :
 
@@ -76,6 +78,7 @@ Expérience Utilisateur et Interface :
 
 Une interface web ou décentralisée (DApp) devra permettre aux joueurs de gérer leurs tokens, de rejoindre les parties et de suivre en temps réel le déroulement du jeu.
 La communication (optionnelle, par chat ou via des indicateurs non verbaux) peut être intégrée, en respectant la décentralisation et la confidentialité des échanges.
+
 5. Économie et Gouvernance
 Gestion des Tokens LIE :
 

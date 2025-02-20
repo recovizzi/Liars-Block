@@ -82,6 +82,7 @@ LiarsBlock is a blockchain-based card game inspired by "Liar's Dice" but played 
 git clone https://github.com/your-username/liarsblock.git
 cd liarsblock
 npm install
+ipfs daemon
 ```
 
 Key **devDependencies**:
