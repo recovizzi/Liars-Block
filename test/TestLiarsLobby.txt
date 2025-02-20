@@ -1,0 +1,114 @@
+Tests d'Initialisation (Initialization) :
+
+- Vérifie l'initialisation avec la bonne adresse de token :
+    - L'adresse du token est correctement enregistrée
+    - La liste des joueurs est vide au départ
+    - L'état initial est "Waiting"
+    - L'index du tour actuel est à 0
+
+- Teste la double initialisation :
+    - La deuxième tentative d'initialisation doit échouer
+    - Vérifie le message d'erreur "Already initialized"
+
+- Vérifie le propriétaire :
+    - Le propriétaire est correctement défini lors du déploiement
+
+
+Tests de Gestion du Lobby :
+
+- Teste l'ajout de joueurs :
+    - Vérifie qu'un joueur peut rejoindre le lobby
+    - Vérifie que la liste des joueurs est mise à jour
+    - Vérifie qu'un joueur ne peut pas rejoindre deux fois
+
+- Teste la sortie de joueurs :
+    - Vérifie qu'un joueur peut quitter le lobby
+    - Vérifie le remboursement de la mise
+    - Vérifie la mise à jour de la liste des joueurs
+
+
+Tests de Gestion des Mises :
+
+- Vérifie les dépôts de mises :
+    Processus de test :
+        1. Un joueur rejoint le lobby
+        2. Le joueur approuve le contrat pour les tokens
+        3. Le joueur dépose une mise
+        4. Vérifie :
+            - L'événement StakeDeposited est émis
+            - Le montant de la mise est correctement enregistré
+            - Les tokens sont transférés au contrat
+
+- Teste les limites de mises :
+    - Tente de déposer plus que MAX_STAKE
+    - Vérifie que la transaction échoue
+
+
+Tests de Gestion des Tours :
+
+- Vérifie la progression des tours :
+    1. Démarrer une partie avec 3 joueurs
+    2. Vérifier l'ordre des tours :
+        - Le premier joueur peut soumettre un coup
+        - Le deuxième ne peut pas jouer hors tour
+        - Après soumission, le tour passe au joueur suivant
+
+- Teste la soumission des coups :
+    1. Un joueur soumet un coup valide
+    2. Vérifie :
+        - L'événement MoveSubmitted est émis
+        - Le hash du coup est enregistré
+        - Le dernier joueur est mis à jour
+
+
+Tests de Challenge et Révélation :
+
+- Teste la révélation des coups :
+    1. Un joueur soumet un coup
+    2. Le coup est challengé
+    3. Le joueur révèle son coup
+    4. Vérifie :
+        - La validité du hash
+        - La mise à jour du compteur de rounds perdus
+        - La réinitialisation des données du coup
+
+
+Tests du Système de Pénalités :
+
+- Vérifie l'accumulation des défaites :
+    1. Faire perdre plusieurs rounds à un joueur
+    2. Vérifier que le compteur augmente correctement
+    3. Vérifier l'élimination après 3 défaites
+
+
+Tests des Fonctions d'Urgence :
+
+- Teste le retrait d'urgence :
+    - Vérifie que seul le propriétaire peut l'exécuter
+    - Vérifie le remboursement des mises
+    - Vérifie la fin du jeu
+
+
+Tests de Démarrage du Jeu (Game Start) :
+
+- Vérifie les conditions minimales de démarrage :
+    - Empêche le démarrage avec moins de 2 joueurs
+    - Vérifie le message d'erreur "Not enough players to start"
+
+- Teste le démarrage réussi :
+    - Ajoute le nombre minimum de joueurs (2)
+    - Vérifie que le démarrage déclenche l'événement GameStarted
+    - S'assure que le jeu démarre sans erreur
+
+- Vérifie l'état du jeu au démarrage :
+    - Contrôle que l'état passe à "InGame" (état 1)
+    - Vérifie la transition depuis l'état "Waiting"
+
+- Teste la génération de référence de jeu :
+    - Vérifie que la référence est un bytes32 non nul
+    - S'assure que la référence est unique pour chaque partie
+
+- Empêche le double démarrage :
+    - Démarre une première fois le jeu
+    - Vérifie que le second démarrage échoue
+    - Contrôle le message d'erreur "Game already started"

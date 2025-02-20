@@ -228,23 +228,62 @@ describe("LiarsLobby", function () {
     // ----- GAME START -----
     describe("Game Start", function () {
         it("should not start with less than 2 players", async function () {
-            // TODO: Tester qu'une partie ne démarre pas avec moins de 2 joueurs.
+            const { liarsLobby, player1 } = await loadFixture(deployFixture);
+            // On ne rejoint que 1 joueur
+            await liarsLobby.joinLobby(player1.address);
+            await expect(liarsLobby.startGame())
+                .to.be.revertedWith("Not enough players to start");
         });
 
         it("should start game successfully with enough players", async function () {
-            // TODO: Vérifier le démarrage du jeu lorsque le nombre minimal est atteint.
+            const { liarsLobby, player1, player2 } = await loadFixture(deployFixture);
+            
+            // Rejoindre avec 2 joueurs
+            await liarsLobby.joinLobby(player1.address);
+            await liarsLobby.joinLobby(player2.address);
+            
+            // Vérifier l'événement GameStarted
+            await expect(liarsLobby.startGame())
+                .to.emit(liarsLobby, "GameStarted");
         });
 
         it("should set correct game state when starting", async function () {
-            // TODO: Vérifier la mise à jour de l'état du jeu au démarrage.
+            const { liarsLobby, player1, player2 } = await loadFixture(deployFixture);
+            
+            // Setup et démarrage
+            await liarsLobby.joinLobby(player1.address);
+            await liarsLobby.joinLobby(player2.address);
+            await liarsLobby.startGame();
+            
+            // Vérifier l'état (LobbyState.InGame = 1)
+            const state = await liarsLobby.state();
+            expect(state).to.equal(1); // InGame
         });
 
         it("should generate valid game reference", async function () {
-            // TODO: Tester la génération d'un code ou d'une référence de partie valide.
+            const { liarsLobby, player1, player2 } = await loadFixture(deployFixture);
+            
+            // Setup et démarrage
+            await liarsLobby.joinLobby(player1.address);
+            await liarsLobby.joinLobby(player2.address);
+            await liarsLobby.startGame();
+            
+            // Vérifier que la référence du jeu est un bytes32 non nul
+            const gameRef = await liarsLobby.gameReference();
+            expect(gameRef).to.not.equal("0x0000000000000000000000000000000000000000000000000000000000000000");
         });
 
         it("should prevent starting an already started game", async function () {
-            // TODO: S'assurer qu'une partie déjà démarrée ne peut pas être redémarrée.
+            const { liarsLobby, player1, player2 } = await loadFixture(deployFixture);
+            
+            // Setup et premier démarrage
+            await liarsLobby.joinLobby(player1.address);
+            await liarsLobby.joinLobby(player2.address);
+            await liarsLobby.startGame();
+            
+            // Tenter de redémarrer
+            await expect(liarsLobby.startGame())
+                .to.be.revertedWith("Game already started");
         });
     });
 
