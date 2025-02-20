@@ -540,7 +540,7 @@ describe("LiarsLobby", function () {
         });
     });
 
-    // ----- REWARD DISTRIBUTION ----- ALEX
+    // ----- REWARD DISTRIBUTION ----- 
     describe("Reward Distribution", function () {
         it("should calculate winner correctly", async function () {
             const { liarsLobby, liarsToken, player1, player2, player3 } = await loadFixture(deployFixture);
