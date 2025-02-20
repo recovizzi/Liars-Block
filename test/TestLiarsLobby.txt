@@ -200,4 +200,68 @@ Tests des Fonctions d'Urgence (Emergency Functions) :
     - Déclenche le retrait d'urgence
     - Vérifie que l'état passe à "Ended" (état 2)
 
-   
+
+Tests de Distribution des Cartes (Card Distribution) :
+
+Initialisation du deck : 
+
+1. "should initialize deck with correct card distribution"
+
+  1. Configure une partie avec 4 joueurs
+  2. Donne des tokens aux joueurs pour les mises
+  3. Enregistre les clés secrètes des joueurs
+  4. Distribue les mains et collecte toutes les cartes
+  5. Vérifie les quantités exactes :
+     * 6 As (type 1)
+     * 6 Rois (type 2)
+     * 6 Reines (type 3)
+     * 2 Jokers (type 4)
+     * Aucune carte de type 0
+
+2. "should distribute all 20 cards with 4 players"
+
+  1. Configure une partie avec exactement 4 joueurs
+  2. Distribue les mains à tous les joueurs
+  3. Compte le total des cartes distribuées
+  4. Vérifie qu'il y a exactement 20 cartes au total
+
+
+Sécurité de la Distribution : 
+
+1. "should require player registration before hand distribution"
+
+  1. Configure une partie
+  2. Tente de demander une main sans enregistrement
+  3. Vérifie l'erreur "Player key not registered"
+
+2. "should prevent hand requests with invalid secret"
+
+  1. Enregistre un joueur avec un secret correct
+  2. Tente d'accéder avec un mauvais secret
+  3. Vérifie l'erreur "Invalid secret"
+
+3. "should prevent double hand requests"
+
+  1. Enregistre et distribue une première main
+  2. Tente une seconde distribution
+  3. Vérifie l'erreur "Hand already requested"
+
+Transitions de phase : 
+
+"should transition to Gameplay phase after all hands distributed"
+
+  1. Configure une partie avec 2 joueurs
+  2. Premier joueur demande sa main
+  3. Vérifie phase Distribution (0)
+  4. Second joueur demande sa main
+  5. Vérifie émission de l'événement RoundPhaseAdvanced(1)
+
+Confidentialité des mains : 
+"should maintain hand privacy between players"
+
+  1. Configure une partie avec 2 joueurs
+  2. Joueur 1 reçoit sa main
+  3. Joueur 2 tente de voir la main du Joueur 1
+  4. Vérifie que la tentative est rejetée
+
+  

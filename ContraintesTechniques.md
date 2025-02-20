@@ -34,7 +34,7 @@ Les règles existantes comprennent :
 Les joueurs sont limités à une mise de 1000 tokens par partie. et ne peut être présent que dans une seule partie à la fois.
 
 ### Tours de Jeu
-- 2 minutes maximum par tour
+- 5 minutes maximum par tour
 - 30 secondes pour contester la (les) cartes jouées
 - Cooldown de 1 minute entre les parties
 
@@ -49,13 +49,13 @@ Pour rappel, la demande de token VIP par les joueurs VIP sont limitées dans le 
 
 Les limites temporelles sont strictement définies :
 
-- Tour par joueur : 2 minutes maximum en tour par tour
+- Tour par joueur : 5 minutes maximum en tour par tour
 - Contestations : 30 secondes
 - Cooldown entre parties : 1 minute
 
 ## 5. Utilisation d’IPFS
 
-Utilisation d'IPFS pour stocker le json des cartes jouées.
+Utilisation d'IPFS pour stocker les cartes jouées sous format JSON.
 IPFS stocke l'addresse du lobby, les cartes jouées par les joueurs et les id des joueurs
 
 ## 6. Tests unitaires avec Hardhat ou Anchor
@@ -64,4 +64,6 @@ IPFS stocke l'addresse du lobby, les cartes jouées par les joueurs et les id de
 - Tests unitaires: >90%
 - Tests d'intégration
 - Tests de charge
+
+
 

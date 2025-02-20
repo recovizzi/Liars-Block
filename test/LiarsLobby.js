@@ -747,17 +747,6 @@ describe("LiarsLobby", function () {
         });
     });
 
-    // ----- GAME STATE MANAGEMENT -----
-    describe("Game State Management", function () {
-        it("should update game state with IPFS hash", async function () {
-            // TODO: Vérifier la mise à jour de l'état du jeu avec un hash IPFS.
-        });
-
-        it("should emit correct state update events", async function () {
-            // TODO: Tester l'émission des événements lors de la mise à jour de l'état.
-        });
-    });
-
     // ----- INTEGRATION TESTS -----
     describe("Integration Tests", function () {
         it("should handle full game cycle", async function () {
@@ -776,4 +765,181 @@ describe("LiarsLobby", function () {
             // TODO: Vérifier la cohérence de l'économie du token LIE sur plusieurs cycles de jeu.
         });
     });
+
+    describe("Card Distribution System", function () {
+        describe("Deck Initialization", function () {
+            it("should initialize deck with correct card distribution", async function () {
+                const { liarsLobby, liarsToken } = await loadFixture(deployFixture);
+                const [owner, ...signers] = await ethers.getSigners();
+                
+                // Setup 4 players using actual signers
+                const players = signers.slice(0, 4);
+                for (let player of players) {
+                    await liarsLobby.joinLobby(player.address);
+                    // Mint tokens for the players
+                    await liarsToken.connect(player).buyTokens({ value: ethers.parseEther("1") });
+                }
+                await liarsLobby.startGame();
+    
+                // Setup all players with keys and get their hands
+                let allCards = [];
+                for (let player of players) {
+                    const secret = `secret_${player.address}`;
+                    const keyHash = ethers.keccak256(ethers.toUtf8Bytes(secret));
+                    await liarsLobby.connect(player).registerPlayerKey(keyHash);
+                    await liarsLobby.connect(player).requestHand(secret);
+                    const hand = await liarsLobby.connect(player).getMyHand(secret);
+                    allCards = [...allCards, ...hand];
+                }
+    
+                // Count total cards by type
+                let cardCounts = [0, 0, 0, 0, 0];
+                for (let card of allCards) {
+                    cardCounts[card]++;
+                }
+    
+                // Verify exact card quantities
+                expect(cardCounts[1]).to.equal(6); // 6 As
+                expect(cardCounts[2]).to.equal(6); // 6 Rois
+                expect(cardCounts[3]).to.equal(6); // 6 Reines
+                expect(cardCounts[4]).to.equal(2); // 2 Jokers
+                expect(cardCounts[0]).to.equal(0); // No cards of type 0
+            });
+    
+            it("should distribute all 20 cards with 4 players", async function () {
+                const { liarsLobby, liarsToken } = await loadFixture(deployFixture);
+                const [owner, ...signers] = await ethers.getSigners();
+                
+                // Setup exactly 4 players using actual signers
+                const players = signers.slice(0, 4);
+                for (let player of players) {
+                    await liarsLobby.joinLobby(player.address);
+                    // Mint tokens for the players
+                    await liarsToken.connect(player).buyTokens({ value: ethers.parseEther("1") });
+                }
+                await liarsLobby.startGame();
+    
+                // Get all hands
+                let totalCards = 0;
+                for (let player of players) {
+                    const secret = `secret_${player.address}`;
+                    const keyHash = ethers.keccak256(ethers.toUtf8Bytes(secret));
+                    await liarsLobby.connect(player).registerPlayerKey(keyHash);
+                    await liarsLobby.connect(player).requestHand(secret);
+                    const hand = await liarsLobby.connect(player).getMyHand(secret);
+                    totalCards += hand.length;
+                }
+    
+                // Verify total cards distributed
+                expect(totalCards).to.equal(20); // 6+6+6+2 = 20 cards total
+            });
+        });
+    
+        describe("Hand Distribution Security", function () {
+            it("should require player registration before hand distribution", async function () {
+                const { liarsLobby, player1 } = await loadFixture(deployFixture);
+                
+                await liarsLobby.joinLobby(player1.address);
+                await liarsLobby.joinLobby(ethers.Wallet.createRandom().address);
+                await liarsLobby.startGame();
+    
+                const secret = "test_secret";
+                await expect(
+                    liarsLobby.connect(player1).requestHand(secret)
+                ).to.be.revertedWith("Player key not registered");
+            });
+    
+            it("should prevent hand requests with invalid secret", async function () {
+                const { liarsLobby, player1 } = await loadFixture(deployFixture);
+                
+                await liarsLobby.joinLobby(player1.address);
+                await liarsLobby.joinLobby(ethers.Wallet.createRandom().address);
+                await liarsLobby.startGame();
+    
+                const secret = "correct_secret";
+                const wrongSecret = "wrong_secret";
+                const keyHash = ethers.keccak256(ethers.toUtf8Bytes(secret));
+                
+                await liarsLobby.connect(player1).registerPlayerKey(keyHash);
+                
+                await expect(
+                    liarsLobby.connect(player1).requestHand(wrongSecret)
+                ).to.be.revertedWith("Invalid secret");
+            });
+    
+            it("should prevent double hand requests", async function () {
+                const { liarsLobby, player1 } = await loadFixture(deployFixture);
+                
+                await liarsLobby.joinLobby(player1.address);
+                await liarsLobby.joinLobby(ethers.Wallet.createRandom().address);
+                await liarsLobby.startGame();
+    
+                const secret = "test_secret";
+                const keyHash = ethers.keccak256(ethers.toUtf8Bytes(secret));
+                
+                await liarsLobby.connect(player1).registerPlayerKey(keyHash);
+                await liarsLobby.connect(player1).requestHand(secret);
+                
+                await expect(
+                    liarsLobby.connect(player1).requestHand(secret)
+                ).to.be.revertedWith("Hand already requested");
+            });
+        });
+    
+        describe("Game Phase Transitions", function () {
+            it("should transition to Gameplay phase after all hands distributed", async function () {
+                const { liarsLobby, player1, player2 } = await loadFixture(deployFixture);
+                
+                await liarsLobby.joinLobby(player1.address);
+                await liarsLobby.joinLobby(player2.address);
+                await liarsLobby.startGame();
+    
+                // Setup both players
+                const secret1 = "secret1";
+                const secret2 = "secret2";
+                await liarsLobby.connect(player1).registerPlayerKey(ethers.keccak256(ethers.toUtf8Bytes(secret1)));
+                await liarsLobby.connect(player2).registerPlayerKey(ethers.keccak256(ethers.toUtf8Bytes(secret2)));
+    
+                // First player requests hand
+                await liarsLobby.connect(player1).requestHand(secret1);
+                expect(await liarsLobby.currentRoundPhase()).to.equal(0); // Still Distribution
+    
+                // Second player requests hand
+                const tx = await liarsLobby.connect(player2).requestHand(secret2);
+                
+                // Verify phase transition
+                await expect(tx)
+                    .to.emit(liarsLobby, "RoundPhaseAdvanced")
+                    .withArgs(1); // Gameplay phase
+            });
+        });
+    
+        describe("Hand Privacy", function () {
+            it("should maintain hand privacy between players", async function () {
+                const { liarsLobby, player1, player2 } = await loadFixture(deployFixture);
+                
+                await liarsLobby.joinLobby(player1.address);
+                await liarsLobby.joinLobby(player2.address);
+                await liarsLobby.startGame();
+    
+                const secret1 = "secret1";
+                const keyHash1 = ethers.keccak256(ethers.toUtf8Bytes(secret1));
+                
+                await liarsLobby.connect(player1).registerPlayerKey(keyHash1);
+                await liarsLobby.connect(player1).requestHand(secret1);
+    
+                // Player 2 shouldn't be able to view player 1's hand
+                await expect(
+                    liarsLobby.connect(player2).getMyHand(secret1)
+                ).to.be.reverted;
+            });
+        });
+    });
+
+
+
+
+
+
+
 });
