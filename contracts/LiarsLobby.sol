@@ -5,6 +5,12 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract LiarsLobby is Ownable {
+    // Ajouter la constante pour la limite de mise
+    uint256 public constant MAX_STAKE = 1000 * 1e18;  // 1000 tokens avec 18 décimales
+
+    // Ajouter l'événement pour la défaite
+    event PlayerDefeated(address indexed player, uint256 stakeLost);
+
     // Define possible states for a lobby.
     enum LobbyState { Waiting, InGame, Ended }
     LobbyState public state;
@@ -30,7 +36,8 @@ contract LiarsLobby is Ownable {
 
     // Ajouter avec les autres variables d'état
     mapping(address => string) public playerLastMoveCID;
- 
+    mapping(address => bool) public predictions;
+    address public lastChallenger;
 
     // Address of the LiarsToken contract.
     IERC20 public liarsToken;
@@ -45,6 +52,11 @@ contract LiarsLobby is Ownable {
     event RewardsDistributed(address winner, uint256 rewardAmount);
     event GameStateUpdated(bytes32 ipfsHash);
     event EmergencyWithdrawal();
+    event PlayerJoined(address indexed player);
+    event PlayerLeft(address indexed player);
+
+    // Ajouter un événement pour la roulette russe
+    event RussianRouletteResult(address player, uint256 chamberNumber, bool survived);
 
     /**
      * @dev Constructor becomes empty since we'll use initialize for clones
@@ -69,7 +81,10 @@ contract LiarsLobby is Ownable {
         require(state == LobbyState.InGame, "Game is not in progress");
         require(msg.sender != lastMover, "Cannot challenge your own move");
         require(bytes(playerLastMoveCID[lastMover]).length > 0, "No move to challenge");
-
+        
+        predictions[msg.sender] = isLiar;
+        lastChallenger = msg.sender;
+        
         emit MoveChallenged(msg.sender, lastMover);
     }
 
@@ -107,6 +122,7 @@ contract LiarsLobby is Ownable {
      */
     function depositStake(uint256 amount) external {
         require(state == LobbyState.Waiting || state == LobbyState.InGame, "Game is not active");
+        require(amount <= MAX_STAKE, "Stake exceeds maximum limit");  // Ajout de la vérification
         require(liarsToken.transferFrom(msg.sender, address(this), amount), "Token transfer failed");
         stakes[msg.sender] += amount;
         emit StakeDeposited(msg.sender, amount);
@@ -155,9 +171,7 @@ contract LiarsLobby is Ownable {
     }
 
     /**
-     * @dev Reveals the previously submitted move to verify its validity.
-     * Compares the hash of the revealed data with the stored move hash.
-     * If invalid, increments the loss count for the mover.
+     * @dev Reveals the previously submitted move and handles the Russian Roulette mechanic if the move is invalid
      * @param revealedData The data that was previously committed.
      */
     function revealMove(bytes memory revealedData) external {
@@ -165,12 +179,56 @@ contract LiarsLobby is Ownable {
         bytes32 computedHash = keccak256(revealedData);
         bool isValid = (computedHash == lastMoveHash);
         emit MoveRevealed(msg.sender, isValid);
+        
         if (!isValid) {
+            // Increment lost rounds counter
             roundsLost[lastMover] += 1;
+            
+            // Russian Roulette mechanic
+            // Generate a pseudo-random number between 1 and 6 (representing chambers)
+            uint256 chamberNumber = uint256(
+                keccak256(
+                    abi.encodePacked(
+                        block.timestamp,
+                        block.prevrandao,
+                        lastMover,
+                        roundsLost[lastMover]
+                    )
+                )
+            ) % 6 + 1; // 1 to 6
+            
+            // The player survives if the chamber number is greater than (6 - rounds lost)
+            // More rounds lost = more dangerous
+            bool survived = chamberNumber > (6 - roundsLost[lastMover]);
+            
+            emit RussianRouletteResult(lastMover, chamberNumber, survived);
+            
+            // If the player doesn't survive, they are eliminated
+            if (!survived) {
+                uint256 stake = stakes[lastMover];
+                stakes[lastMover] = 0;
+                emit PlayerDefeated(lastMover, stake);
+                // Remove the player from the game
+                _removePlayer(lastMover);
+            }
         }
+        
         // Reset the last move data
         lastMoveHash = 0;
         lastMover = address(0);
+    }
+
+    /**
+     * @dev Internal function to remove a player from the game
+     */
+    function _removePlayer(address player) internal {
+        for (uint256 i = 0; i < players.length; i++) {
+            if (players[i] == player) {
+                players[i] = players[players.length - 1];
+                players.pop();
+                break;
+            }
+        }
     }
 
     /**
@@ -238,6 +296,7 @@ contract LiarsLobby is Ownable {
         require(state == LobbyState.Waiting, "Game already started");
         require(!includes(player), "Player already in lobby");
         players.push(player);
+        emit PlayerJoined(player);
     }
 
     /**
@@ -245,8 +304,8 @@ contract LiarsLobby is Ownable {
      * @param player The address of the player leaving the lobby.
      */
     function leaveLobby(address player) external {
-        require(state == LobbyState.Waiting, "Game already started");
         require(includes(player), "Player not in lobby");
+        
         // Remove player from the players array
         for (uint256 i = 0; i < players.length; i++) {
             if (players[i] == player) {
@@ -255,10 +314,24 @@ contract LiarsLobby is Ownable {
                 break;
             }
         }
-        // Return stake to the player
+
         uint256 stake = stakes[player];
-        require(liarsToken.transfer(player, stake), "Token transfer failed");
         stakes[player] = 0;
+
+        if (state == LobbyState.Waiting) {
+            // Si le jeu n'a pas commencé, remboursement de la mise
+            if (stake > 0) {
+                require(liarsToken.transfer(player, stake), "Token transfer failed");
+            }
+        } else {
+            // Si le jeu a commencé, le joueur perd sa mise
+            if (stake > 0) {
+                emit PlayerDefeated(player, stake);
+                // La mise reste dans le pot pour les autres joueurs
+            }
+        }
+        
+        emit PlayerLeft(player);
     }
 
     // Add helper function for includes check
