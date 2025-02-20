@@ -145,3 +145,59 @@ Tests de Démarrage du Jeu (Game Start) :
     - Démarre une première fois le jeu
     - Vérifie que le second démarrage échoue
     - Contrôle le message d'erreur "Game already started"
+
+
+Tests de Distribution des Récompenses (Reward Distribution) :
+
+1. Calcul correct du gagnant :
+    - Configure une partie avec 3 joueurs et des mises de 100 tokens chacun
+    - Enregistre la balance initiale du joueur 1
+    - Simule un scénario où :
+        * Player 1 fait un coup valide
+        * Player 2 challenge et perd (mauvais challenge)
+        * Player 2 fait un coup invalide
+        * Player 3 challenge et gagne (Player 2 ment)
+    - Vérifie que le gagnant (Player 1) reçoit :
+        * Balance initiale - mise + pot total (300 tokens)
+
+2. Distribution du pot total :
+    - Configure une partie avec 2 joueurs (100 tokens chacun)
+    - Crée une situation où Player 1 ment et perd
+    - Vérifie que Player 2 reçoit le pot total (200 tokens)
+    - S'assure que la balance finale est supérieure à la mise initiale
+
+3. Gestion des égalités :
+    - Configure une partie avec 2 joueurs
+    - Crée une situation d'égalité où :
+        * Player 1 ment et perd
+        * Player 2 ment et perd
+    - Vérifie que Player 1 gagne (premier joueur gagne en cas d'égalité)
+    - Confirme que sa balance finale est supérieure à sa mise
+
+4. Fin de partie après distribution :
+    - Configure une partie standard avec 2 joueurs
+    - Distribue les récompenses
+    - Vérifie que l'état du jeu passe à "Ended" (état 2)
+
+
+Tests des Fonctions d'Urgence (Emergency Functions) :
+
+1. Retrait d'urgence par le propriétaire :
+    - Vérifie que seul le propriétaire peut déclencher le retrait
+    - Confirme l'émission de l'événement EmergencyWithdrawal
+
+2. Restriction du retrait d'urgence :
+    - Vérifie qu'un non-propriétaire ne peut pas déclencher le retrait
+    - Confirme le rejet avec l'erreur OwnableUnauthorizedAccount
+
+3. Réinitialisation des mises :
+    - Configure une partie avec 2 joueurs et leurs mises
+    - Déclenche le retrait d'urgence
+    - Vérifie que toutes les mises sont remises à 0
+
+4. Fin de partie sur urgence :
+    - Démarre une partie avec 2 joueurs
+    - Déclenche le retrait d'urgence
+    - Vérifie que l'état passe à "Ended" (état 2)
+
+   
