@@ -378,19 +378,85 @@ describe("LiarsLobby", function () {
     // ----- TURN MANAGEMENT -----
     describe("Turn Management", function () {
         it("should track current turn correctly", async function () {
-            // TODO: Vérifier le suivi de l'indice du tour courant.
+            const { liarsLobby, player1, player2, player3 } = await loadFixture(deployFixture);
+            
+            // Setup initial
+            await liarsLobby.joinLobby(player1.address);
+            await liarsLobby.joinLobby(player2.address);
+            await liarsLobby.joinLobby(player3.address);
+            await liarsLobby.startGame();
+            
+            // Vérifier que le premier tour est attribué au premier joueur
+            const currentTurn = await liarsLobby.getCurrentTurn();
+            expect(currentTurn).to.equal(player1.address);
         });
 
         it("should advance turn after move submission", async function () {
-            // TODO: Tester le passage au joueur suivant après une action valide.
+            const { liarsLobby, player1, player2, player3 } = await loadFixture(deployFixture);
+            
+            // Setup initial
+            await liarsLobby.joinLobby(player1.address);
+            await liarsLobby.joinLobby(player2.address);
+            await liarsLobby.joinLobby(player3.address);
+            await liarsLobby.startGame();
+            
+            // Créer un hash pour le move
+            const moveHash = ethers.keccak256(ethers.toUtf8Bytes("move1"));
+            
+            // Player1 soumet son coup
+            await liarsLobby.connect(player1).submitMove(moveHash);
+            
+            // Vérifier que c'est maintenant le tour de player2
+            const nextTurn = await liarsLobby.getCurrentTurn();
+            expect(nextTurn).to.equal(player2.address);
         });
 
         it("should prevent moves from wrong player", async function () {
-            // TODO: S'assurer qu'un joueur hors tour ne peut pas jouer.
+            const { liarsLobby, player1, player2 } = await loadFixture(deployFixture);
+            
+            // Setup initial
+            await liarsLobby.joinLobby(player1.address);
+            await liarsLobby.joinLobby(player2.address);
+            await liarsLobby.startGame();
+            
+            const moveHash = ethers.keccak256(ethers.toUtf8Bytes("move1"));
+            
+            // Player2 tente de jouer alors que c'est le tour de player1
+            await expect(
+                liarsLobby.connect(player2).submitMove(moveHash)
+            ).to.be.revertedWith("Not your turn");
         });
 
         it("should cycle through players correctly", async function () {
-            // TODO: Vérifier que l'ordre de passage est bien cyclique.
+            const { liarsLobby, player1, player2, player3 } = await loadFixture(deployFixture);
+            
+            // Setup initial
+            await liarsLobby.joinLobby(player1.address);
+            await liarsLobby.joinLobby(player2.address);
+            await liarsLobby.joinLobby(player3.address);
+            await liarsLobby.startGame();
+            
+            // Créer des hashs pour les moves
+            const move1Hash = ethers.keccak256(ethers.toUtf8Bytes("move1"));
+            const move2Hash = ethers.keccak256(ethers.toUtf8Bytes("move2"));
+            const move3Hash = ethers.keccak256(ethers.toUtf8Bytes("move3"));
+            
+            // Vérifier le cycle complet
+            
+            // Tour 1: Player1 -> Player2
+            await liarsLobby.connect(player1).submitMove(move1Hash);
+            let currentTurn = await liarsLobby.getCurrentTurn();
+            expect(currentTurn).to.equal(player2.address);
+            
+            // Tour 2: Player2 -> Player3
+            await liarsLobby.connect(player2).submitMove(move2Hash);
+            currentTurn = await liarsLobby.getCurrentTurn();
+            expect(currentTurn).to.equal(player3.address);
+            
+            // Tour 3: Player3 -> Player1 (cycle complet)
+            await liarsLobby.connect(player3).submitMove(move3Hash);
+            currentTurn = await liarsLobby.getCurrentTurn();
+            expect(currentTurn).to.equal(player1.address);
         });
     });
 

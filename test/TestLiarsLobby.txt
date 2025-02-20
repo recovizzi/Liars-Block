@@ -70,21 +70,28 @@ Tests de Gestion des Mises (Stake Management) :
         3. S'assure que la mise n'est pas enregistrée
 
 
-Tests de Gestion des Tours :
+Tests de Gestion des Tours (Turn Management) :
 
-- Vérifie la progression des tours :
-    1. Démarrer une partie avec 3 joueurs
-    2. Vérifier l'ordre des tours :
-        - Le premier joueur peut soumettre un coup
-        - Le deuxième ne peut pas jouer hors tour
-        - Après soumission, le tour passe au joueur suivant
+- Vérifie le suivi du tour courant :
+    - Configure une partie avec 3 joueurs
+    - Vérifie que le premier tour est attribué au bon joueur
+    - S'assure que l'index de tour est correctement initialisé
 
-- Teste la soumission des coups :
-    1. Un joueur soumet un coup valide
-    2. Vérifie :
-        - L'événement MoveSubmitted est émis
-        - Le hash du coup est enregistré
-        - Le dernier joueur est mis à jour
+- Vérifie l'avancement des tours :
+    - Un joueur soumet un coup valide
+    - Vérifie que le tour passe au joueur suivant
+    - Confirme que l'index est mis à jour
+
+- Empêche les coups hors tour :
+    - Tente de faire jouer un joueur hors de son tour
+    - Vérifie que la transaction est rejetée
+    - Contrôle le message d'erreur "Not your turn"
+
+- Vérifie le cycle des joueurs :
+    - Configure une partie avec 3 joueurs
+    - Fait jouer chaque joueur à son tour
+    - Vérifie que le cycle revient au premier joueur
+    - S'assure que l'ordre est maintenu
 
 
 Tests de Challenge et Révélation :
