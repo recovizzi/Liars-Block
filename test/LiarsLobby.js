@@ -540,41 +540,210 @@ describe("LiarsLobby", function () {
         });
     });
 
-    // ----- REWARD DISTRIBUTION -----
+    // ----- REWARD DISTRIBUTION ----- ALEX
     describe("Reward Distribution", function () {
         it("should calculate winner correctly", async function () {
-            // TODO: Tester le calcul correct du gagnant.
+            const { liarsLobby, liarsToken, player1, player2, player3 } = await loadFixture(deployFixture);
+            const stake = ethers.parseEther("100");
+            
+            // Setup game
+            await liarsLobby.joinLobby(player1.address);
+            await liarsLobby.joinLobby(player2.address);
+            await liarsLobby.joinLobby(player3.address);
+            
+            // Record initial balance
+            const initialBalance = await liarsToken.balanceOf(player1.address);
+            
+            // Approve and deposit stakes
+            await liarsToken.connect(player1).approve(await liarsLobby.getAddress(), stake);
+            await liarsToken.connect(player2).approve(await liarsLobby.getAddress(), stake);
+            await liarsToken.connect(player3).approve(await liarsLobby.getAddress(), stake);
+            
+            await liarsLobby.connect(player1).depositStake(stake);
+            await liarsLobby.connect(player2).depositStake(stake);
+            await liarsLobby.connect(player3).depositStake(stake);
+            
+            await liarsLobby.startGame();
+    
+            // Create moves and submit them
+            const validMove = ethers.toUtf8Bytes("valid_move");
+            const validMoveHash = ethers.keccak256(validMove);
+            const invalidMove = ethers.toUtf8Bytes("invalid_move");
+            const invalidMoveHash = ethers.keccak256(invalidMove);
+    
+            // Create loss situations through moves and challenges
+            await liarsLobby.connect(player1).submitMove(validMoveHash);
+            await liarsLobby.connect(player2).challengeMove();
+            await liarsLobby.revealMove(validMove); // Player 2 loses for wrong challenge
+    
+            await liarsLobby.connect(player2).submitMove(invalidMoveHash);
+            await liarsLobby.connect(player3).challengeMove();
+            await liarsLobby.revealMove(invalidMove); // Player 2 loses for lying
+    
+            // Distribute rewards
+            await liarsLobby.distributeRewards();
+            
+            // Calculate expected final balance
+            const totalPot = stake * BigInt(3); // Total stakes from all players
+            const expectedBalance = initialBalance - stake + totalPot; // Initial - stake + winnings
+            
+            // Verify winner (player1) received correct amount
+            const finalBalance = await liarsToken.balanceOf(player1.address);
+            expect(finalBalance).to.equal(expectedBalance);
         });
-
+    
         it("should distribute total pot to winner", async function () {
-            // TODO: Vérifier que la cagnotte est distribuée correctement.
+            const { liarsLobby, liarsToken, player1, player2 } = await loadFixture(deployFixture);
+            const stake = ethers.parseEther("100");
+            
+            // Setup and start game
+            await liarsLobby.joinLobby(player1.address);
+            await liarsLobby.joinLobby(player2.address);
+            
+            await liarsToken.connect(player1).approve(await liarsLobby.getAddress(), stake);
+            await liarsToken.connect(player2).approve(await liarsLobby.getAddress(), stake);
+            
+            await liarsLobby.connect(player1).depositStake(stake);
+            await liarsLobby.connect(player2).depositStake(stake);
+            
+            await liarsLobby.startGame();
+    
+            // Create a loss situation through move and challenge
+            const invalidMove = ethers.toUtf8Bytes("invalid_move");
+            const invalidMoveHash = ethers.keccak256(invalidMove);
+    
+            await liarsLobby.connect(player1).submitMove(invalidMoveHash);
+            await liarsLobby.connect(player2).challengeMove();
+            await liarsLobby.revealMove(invalidMove); // Player 1 loses for lying
+            
+            // Distribute rewards
+            await liarsLobby.distributeRewards();
+            
+            // Verify winner (player2) received total pot
+            const finalBalance = await liarsToken.balanceOf(player2.address);
+            const totalPot = stake * BigInt(2);
+            expect(finalBalance).to.be.gt(stake);
         });
-
+    
         it("should handle ties appropriately", async function () {
-            // TODO: S'assurer que les égalités sont gérées selon les règles.
+            const { liarsLobby, liarsToken, player1, player2 } = await loadFixture(deployFixture);
+            const stake = ethers.parseEther("100");
+            
+            // Setup game
+            await liarsLobby.joinLobby(player1.address);
+            await liarsLobby.joinLobby(player2.address);
+            
+            await liarsToken.connect(player1).approve(await liarsLobby.getAddress(), stake);
+            await liarsToken.connect(player2).approve(await liarsLobby.getAddress(), stake);
+            
+            await liarsLobby.connect(player1).depositStake(stake);
+            await liarsLobby.connect(player2).depositStake(stake);
+            
+            await liarsLobby.startGame();
+    
+            // Create tie situation through moves and challenges
+            const invalidMove = ethers.toUtf8Bytes("invalid_move");
+            const invalidMoveHash = ethers.keccak256(invalidMove);
+    
+            // Both players make invalid moves and get caught
+            await liarsLobby.connect(player1).submitMove(invalidMoveHash);
+            await liarsLobby.connect(player2).challengeMove();
+            await liarsLobby.revealMove(invalidMove);
+    
+            await liarsLobby.connect(player2).submitMove(invalidMoveHash);
+            await liarsLobby.connect(player1).challengeMove();
+            await liarsLobby.revealMove(invalidMove);
+            
+            // Distribute rewards (first player should win in tie)
+            await liarsLobby.distributeRewards();
+            
+            // Verify first player wins in tie
+            const player1Balance = await liarsToken.balanceOf(player1.address);
+            expect(player1Balance).to.be.gt(stake);
         });
-
+    
         it("should end game after distribution", async function () {
-            // TODO: Vérifier que le jeu se termine après la distribution des gains.
+            const { liarsLobby, liarsToken, player1, player2 } = await loadFixture(deployFixture);
+            const stake = ethers.parseEther("100");
+            
+            // Setup and start game
+            await liarsLobby.joinLobby(player1.address);
+            await liarsLobby.joinLobby(player2.address);
+            
+            await liarsToken.connect(player1).approve(await liarsLobby.getAddress(), stake);
+            await liarsToken.connect(player2).approve(await liarsLobby.getAddress(), stake);
+            
+            await liarsLobby.connect(player1).depositStake(stake);
+            await liarsLobby.connect(player2).depositStake(stake);
+            
+            await liarsLobby.startGame();
+            
+            // Distribute rewards
+            await liarsLobby.distributeRewards();
+            
+            // Check game state is Ended (2)
+            const gameState = await liarsLobby.state();
+            expect(gameState).to.equal(2); // LobbyState.Ended
         });
     });
-
-    // ----- EMERGENCY FUNCTIONS -----
+    
     describe("Emergency Functions", function () {
         it("should allow owner to trigger emergency withdrawal", async function () {
-            // TODO: Tester que le propriétaire peut déclencher un retrait d'urgence.
+            const { liarsLobby, owner } = await loadFixture(deployFixture);
+            
+            // Only owner should be able to call emergency withdrawal
+            await expect(liarsLobby.connect(owner).emergencyWithdraw())
+                .to.emit(liarsLobby, 'EmergencyWithdrawal');
         });
-
+    
         it("should prevent non-owner from emergency withdrawal", async function () {
-            // TODO: Vérifier qu'un utilisateur non-propriétaire ne peut pas faire cela.
+            const { liarsLobby, player1 } = await loadFixture(deployFixture);
+            
+            // Non-owner should not be able to trigger emergency withdrawal
+            await expect(liarsLobby.connect(player1).emergencyWithdraw())
+                .to.be.revertedWithCustomError(liarsLobby, "OwnableUnauthorizedAccount")
+                .withArgs(player1.address);
         });
-
+    
         it("should reset stakes correctly", async function () {
-            // TODO: Vérifier la réinitialisation des mises en cas d'urgence.
+            const { liarsLobby, liarsToken, player1, player2 } = await loadFixture(deployFixture);
+            const stake = ethers.parseEther("100");
+            
+            // Setup stakes
+            await liarsLobby.joinLobby(player1.address);
+            await liarsLobby.joinLobby(player2.address);
+            
+            await liarsToken.connect(player1).approve(await liarsLobby.getAddress(), stake);
+            await liarsToken.connect(player2).approve(await liarsLobby.getAddress(), stake);
+            
+            await liarsLobby.connect(player1).depositStake(stake);
+            await liarsLobby.connect(player2).depositStake(stake);
+            
+            // Trigger emergency withdrawal
+            await liarsLobby.emergencyWithdraw();
+            
+            // Check stakes are reset
+            const player1Stake = await liarsLobby.stakes(player1.address);
+            const player2Stake = await liarsLobby.stakes(player2.address);
+            
+            expect(player1Stake).to.equal(0);
+            expect(player2Stake).to.equal(0);
         });
-
+    
         it("should end game on emergency", async function () {
-            // TODO: Tester que l'urgence met fin à la partie.
+            const { liarsLobby } = await loadFixture(deployFixture);
+            
+            // Start game
+            await liarsLobby.joinLobby(ethers.Wallet.createRandom().address);
+            await liarsLobby.joinLobby(ethers.Wallet.createRandom().address);
+            await liarsLobby.startGame();
+            
+            // Trigger emergency
+            await liarsLobby.emergencyWithdraw();
+            
+            // Check game state is Ended
+            const gameState = await liarsLobby.state();
+            expect(gameState).to.equal(2); // LobbyState.Ended
         });
     });
 
