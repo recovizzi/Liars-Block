@@ -15,6 +15,15 @@ contract LiarsLobby is Ownable {
     enum LobbyState { Waiting, InGame, Ended }
     LobbyState public state;
 
+    // Ajout des nouvelles énumérations et variables d'état
+    enum RoundPhase { Distribution, Gameplay }
+    RoundPhase public currentRoundPhase;
+    
+    uint8[] private deck;
+    mapping(address => uint8[5]) private playerHands;
+    mapping(address => bytes32) private handCommitments;
+    mapping(address => bytes32) private playerKeyHashes;
+
     // Array of players in the lobby.
     address[] public players;
 
@@ -57,6 +66,18 @@ contract LiarsLobby is Ownable {
 
     // Ajouter un événement pour la roulette russe
     event RussianRouletteResult(address player, uint256 chamberNumber, bool survived);
+
+    // Ajout des nouveaux événements
+    event HandDistributed(address indexed player, bytes32 commitment);
+    event RoundPhaseAdvanced(RoundPhase newPhase);
+
+    // Ajouter avec les autres variables d'état au début du contrat
+    uint256 public constant TURN_TIMEOUT = 5 minutes;
+    uint256 public turnStartTimestamp;
+    mapping(address => bool) public eliminated;
+
+    // Ajouter avec les autres events
+    event PlayerTimedOut(address indexed player);
 
     /**
      * @dev Constructor becomes empty since we'll use initialize for clones
@@ -101,6 +122,79 @@ contract LiarsLobby is Ownable {
         state = LobbyState.Waiting;
         currentTurnIndex = 0;
         liarsToken = IERC20(_liarsToken);
+        _initializeDeck();
+        currentRoundPhase = RoundPhase.Distribution;
+    }
+
+    function registerPlayerKey(bytes32 keyHash) external {
+        require(playerKeyHashes[msg.sender] == 0, "Key already registered");
+        bool isPlayer = false;
+        for (uint i = 0; i < players.length; i++) {
+            if (players[i] == msg.sender) {
+                isPlayer = true;
+                break;
+            }
+        }
+        require(isPlayer, "Not a player");
+        playerKeyHashes[msg.sender] = keyHash;
+    }
+
+    function requestHand(string memory secret) external {
+        require(playerKeyHashes[msg.sender] != 0, "Player key not registered");
+        require(currentRoundPhase == RoundPhase.Distribution, "Not in distribution phase");
+        require(handCommitments[msg.sender] == 0, "Hand already requested");
+        require(keccak256(abi.encodePacked(secret)) == playerKeyHashes[msg.sender], "Invalid secret");
+        
+        uint8[5] memory hand = _drawCards(5);
+        bytes32 commitment = keccak256(abi.encodePacked(hand, secret));
+        
+        playerHands[msg.sender] = hand;
+        handCommitments[msg.sender] = commitment;
+        
+        emit HandDistributed(msg.sender, commitment);
+        
+        if(_allHandsDistributed()) {
+            currentRoundPhase = RoundPhase.Gameplay;
+            emit RoundPhaseAdvanced(currentRoundPhase);
+        }
+    }
+
+    function getMyHand(string memory secret) external view returns (uint8[5] memory) {
+        require(handCommitments[msg.sender] != 0, "Hand not distributed");
+        require(keccak256(abi.encodePacked(secret)) == playerKeyHashes[msg.sender], "Invalid secret");
+        return playerHands[msg.sender];
+    }
+
+    function _drawCards(uint256 count) internal returns (uint8[5] memory) {
+        require(deck.length >= count, "Not enough cards left");
+        uint8[5] memory hand;
+        for (uint256 i = 0; i < count; i++) {
+            uint256 randIndex = uint256(keccak256(abi.encodePacked(block.timestamp, msg.sender, i))) % deck.length;
+            hand[i] = deck[randIndex];
+            deck[randIndex] = deck[deck.length - 1];
+            deck.pop();
+        }
+        return hand;
+    }
+
+    function _initializeDeck() internal {
+        // Initialisation avec 6 As (1), 6 Rois (2), 6 Reines (3) et 2 Jokers (4)
+        for (uint8 i = 0; i < 6; i++) {
+            deck.push(1); // As
+            deck.push(2); // Roi
+            deck.push(3); // Reine
+        }
+        deck.push(4); // Joker
+        deck.push(4); // Joker
+    }
+
+    function _allHandsDistributed() internal view returns (bool) {
+        for (uint256 i = 0; i < players.length; i++) {
+            if (handCommitments[players[i]] == 0) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
@@ -342,5 +436,34 @@ contract LiarsLobby is Ownable {
             }
         }
         return false;
+    }
+
+    /**
+     * @dev Handles the timeout of a player's turn
+     * @param player The address of the player who timed out
+     */
+    function handleTimeout(address player) external {
+        require(state == LobbyState.InGame, "Game not in progress");
+        require(!eliminated[player], "Player already eliminated");
+        require(player == players[currentTurnIndex], "Not player's turn");
+        require(block.timestamp > turnStartTimestamp + TURN_TIMEOUT, "Turn not timed out");
+        
+        eliminated[player] = true;
+        uint256 playerStake = stakes[player];
+        stakes[player] = 0;
+        
+        emit PlayerTimedOut(player);
+        emit PlayerDefeated(player, playerStake);
+        
+        _removePlayer(player);
+        
+        // Check if only one player remains
+        if (players.length == 1) {
+            // Game ends when only one player remains
+            // distributeRewards();
+        } else {
+            // Advance to next player
+            currentTurnIndex = currentTurnIndex % players.length;
+        }
     }
 }
