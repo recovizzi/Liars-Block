@@ -34,6 +34,10 @@ contract LiarsLobby is Ownable {
     // Mapping to record stakes deposited by each player.
     mapping(address => uint256) public stakes;
 
+    // Ajouter avec les autres variables d'état
+    mapping(address => string) public playerLastMoveCID;
+ 
+
     // Address of the LiarsToken contract.
     IERC20 public liarsToken;
 
@@ -54,6 +58,29 @@ contract LiarsLobby is Ownable {
      * @dev Constructor becomes empty since we'll use initialize for clones
      */
     constructor() Ownable(msg.sender) {}
+
+
+    // Ajouter avec les autres fonctions
+    function submitMove(bytes32 encryptedMoveHash, string calldata ipfsCID) external {
+        require(state == LobbyState.InGame, "Game is not in progress");
+        require(msg.sender == players[currentTurnIndex], "Not your turn");
+        
+        lastMoveHash = encryptedMoveHash;
+        lastMover = msg.sender;
+        playerLastMoveCID[msg.sender] = ipfsCID;
+        
+        emit MoveSubmitted(msg.sender, encryptedMoveHash);
+        currentTurnIndex = (currentTurnIndex + 1) % players.length;
+    }
+
+    function challengeMove(bool isLiar) external {
+        require(state == LobbyState.InGame, "Game is not in progress");
+        require(msg.sender != lastMover, "Cannot challenge your own move");
+        require(bytes(playerLastMoveCID[lastMover]).length > 0, "No move to challenge");
+
+        emit MoveChallenged(msg.sender, lastMover);
+    }
+
 
     /**
      * @dev Initialization function for clones
