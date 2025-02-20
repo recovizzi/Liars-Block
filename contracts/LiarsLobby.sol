@@ -36,7 +36,8 @@ contract LiarsLobby is Ownable {
 
     // Ajouter avec les autres variables d'état
     mapping(address => string) public playerLastMoveCID;
- 
+    mapping(address => bool) public predictions;
+    address public lastChallenger;
 
     // Address of the LiarsToken contract.
     IERC20 public liarsToken;
@@ -53,6 +54,9 @@ contract LiarsLobby is Ownable {
     event EmergencyWithdrawal();
     event PlayerJoined(address indexed player);
     event PlayerLeft(address indexed player);
+
+    // Ajouter un événement pour la roulette russe
+    event RussianRouletteResult(address player, uint256 chamberNumber, bool survived);
 
     /**
      * @dev Constructor becomes empty since we'll use initialize for clones
@@ -77,7 +81,10 @@ contract LiarsLobby is Ownable {
         require(state == LobbyState.InGame, "Game is not in progress");
         require(msg.sender != lastMover, "Cannot challenge your own move");
         require(bytes(playerLastMoveCID[lastMover]).length > 0, "No move to challenge");
-
+        
+        predictions[msg.sender] = isLiar;
+        lastChallenger = msg.sender;
+        
         emit MoveChallenged(msg.sender, lastMover);
     }
 
@@ -164,9 +171,7 @@ contract LiarsLobby is Ownable {
     }
 
     /**
-     * @dev Reveals the previously submitted move to verify its validity.
-     * Compares the hash of the revealed data with the stored move hash.
-     * If invalid, increments the loss count for the mover.
+     * @dev Reveals the previously submitted move and handles the Russian Roulette mechanic if the move is invalid
      * @param revealedData The data that was previously committed.
      */
     function revealMove(bytes memory revealedData) external {
@@ -174,12 +179,56 @@ contract LiarsLobby is Ownable {
         bytes32 computedHash = keccak256(revealedData);
         bool isValid = (computedHash == lastMoveHash);
         emit MoveRevealed(msg.sender, isValid);
+        
         if (!isValid) {
+            // Increment lost rounds counter
             roundsLost[lastMover] += 1;
+            
+            // Russian Roulette mechanic
+            // Generate a pseudo-random number between 1 and 6 (representing chambers)
+            uint256 chamberNumber = uint256(
+                keccak256(
+                    abi.encodePacked(
+                        block.timestamp,
+                        block.prevrandao,
+                        lastMover,
+                        roundsLost[lastMover]
+                    )
+                )
+            ) % 6 + 1; // 1 to 6
+            
+            // The player survives if the chamber number is greater than (6 - rounds lost)
+            // More rounds lost = more dangerous
+            bool survived = chamberNumber > (6 - roundsLost[lastMover]);
+            
+            emit RussianRouletteResult(lastMover, chamberNumber, survived);
+            
+            // If the player doesn't survive, they are eliminated
+            if (!survived) {
+                uint256 stake = stakes[lastMover];
+                stakes[lastMover] = 0;
+                emit PlayerDefeated(lastMover, stake);
+                // Remove the player from the game
+                _removePlayer(lastMover);
+            }
         }
+        
         // Reset the last move data
         lastMoveHash = 0;
         lastMover = address(0);
+    }
+
+    /**
+     * @dev Internal function to remove a player from the game
+     */
+    function _removePlayer(address player) internal {
+        for (uint256 i = 0; i < players.length; i++) {
+            if (players[i] == player) {
+                players[i] = players[players.length - 1];
+                players.pop();
+                break;
+            }
+        }
     }
 
     /**
