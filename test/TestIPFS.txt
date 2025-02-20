@@ -1,0 +1,13 @@
+Vérifier que les dépendances sont installées : 
+
+npm install ipfs-http-client
+
+Avant de lancer les tests dans un terminal : 
+
+ipfs daemon
+
+
+Chaque joueur lorsqu'il joue, envoie sur ipfs sa ou ses cartes jouées sur ipfs. 
+Le fichier généré doit être un fichier JSON, il doit y avoir adresse du joueur, ses cartes jouées, adresse du lobby,  
+
+
