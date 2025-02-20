@@ -290,19 +290,88 @@ describe("LiarsLobby", function () {
     // ----- STAKE MANAGEMENT -----
     describe("Stake Management", function () {
         it("should allow players to deposit stakes", async function () {
-            // TODO: Tester que les joueurs peuvent déposer leurs mises.
+            const { liarsLobby, liarsToken, player1 } = await loadFixture(deployFixture);
+            const stakeAmount = ethers.parseEther("100");
+            
+            // Setup initial
+            await liarsToken.connect(player1).approve(await liarsLobby.getAddress(), stakeAmount);
+            await liarsLobby.joinLobby(player1.address);
+
+            // Vérifier l'événement et le dépôt
+            await expect(liarsLobby.connect(player1).depositStake(stakeAmount))
+                .to.emit(liarsLobby, "StakeDeposited")
+                .withArgs(player1.address, stakeAmount);
+
+            const playerStake = await liarsLobby.stakes(player1.address);
+            expect(playerStake).to.equal(stakeAmount);
         });
 
         it("should track stakes correctly per player", async function () {
-            // TODO: Vérifier le suivi individuel des mises.
+            const { liarsLobby, liarsToken, player1, player2 } = await loadFixture(deployFixture);
+            const stake1 = ethers.parseEther("100");
+            const stake2 = ethers.parseEther("200");
+
+            // Setup pour les deux joueurs
+            await liarsLobby.joinLobby(player1.address);
+            await liarsLobby.joinLobby(player2.address);
+            await liarsToken.connect(player1).approve(await liarsLobby.getAddress(), stake1);
+            await liarsToken.connect(player2).approve(await liarsLobby.getAddress(), stake2);
+
+            // Dépôt des mises
+            await liarsLobby.connect(player1).depositStake(stake1);
+            await liarsLobby.connect(player2).depositStake(stake2);
+
+            // Vérification des mises
+            expect(await liarsLobby.stakes(player1.address)).to.equal(stake1);
+            expect(await liarsLobby.stakes(player2.address)).to.equal(stake2);
         });
 
         it("should prevent stake deposits after game ends", async function () {
-            // TODO: S'assurer qu'une fois la partie terminée, aucun dépôt de mise n'est accepté.
+            const { liarsLobby, liarsToken, player1, player2 } = await loadFixture(deployFixture);
+            const stakeAmount = ethers.parseEther("100");
+
+            // Setup et démarrage du jeu
+            await liarsLobby.joinLobby(player1.address);
+            await liarsLobby.joinLobby(player2.address);
+            await liarsToken.connect(player1).approve(await liarsLobby.getAddress(), stakeAmount);
+            
+            // Terminer le jeu (mettre l'état à Ended)
+            await liarsLobby.emergencyWithdraw(); // ou une autre méthode pour terminer le jeu
+
+            // Tentative de dépôt après la fin
+            await expect(liarsLobby.connect(player1).depositStake(stakeAmount))
+                .to.be.revertedWith("Game is not active");
         });
 
         it("should handle token transfers correctly", async function () {
-            // TODO: Vérifier que le transfert des tokens pour les mises s'effectue correctement.
+            const { liarsLobby, liarsToken, player1 } = await loadFixture(deployFixture);
+            const stakeAmount = ethers.parseEther("100");
+
+            // Setup initial
+            await liarsLobby.joinLobby(player1.address);
+            const initialBalance = await liarsToken.balanceOf(player1.address);
+            await liarsToken.connect(player1).approve(await liarsLobby.getAddress(), stakeAmount);
+
+            // Déposer la mise
+            await liarsLobby.connect(player1).depositStake(stakeAmount);
+
+            // Vérifier les balances
+            expect(await liarsToken.balanceOf(player1.address)).to.equal(initialBalance - stakeAmount);
+            expect(await liarsToken.balanceOf(await liarsLobby.getAddress())).to.equal(stakeAmount);
+        });
+
+        it("should respect maximum stake limit", async function () {
+            const { liarsLobby, liarsToken, player1 } = await loadFixture(deployFixture);
+            const maxStake = await liarsLobby.MAX_STAKE();
+            const overMaxStake = maxStake + BigInt(1);
+
+            // Setup
+            await liarsLobby.joinLobby(player1.address);
+            await liarsToken.connect(player1).approve(await liarsLobby.getAddress(), overMaxStake);
+
+            // Tenter de dépasser la limite
+            await expect(liarsLobby.connect(player1).depositStake(overMaxStake))
+                .to.be.revertedWith("Stake exceeds maximum limit");
         });
     });
 

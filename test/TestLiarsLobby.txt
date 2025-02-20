@@ -27,21 +27,47 @@ Tests de Gestion du Lobby :
     - Vérifie la mise à jour de la liste des joueurs
 
 
-Tests de Gestion des Mises :
+Tests de Gestion des Mises (Stake Management) :
 
-- Vérifie les dépôts de mises :
-    Processus de test :
+- Vérifie le dépôt des mises :
+    - Prépare l'environnement :
         1. Un joueur rejoint le lobby
-        2. Le joueur approuve le contrat pour les tokens
-        3. Le joueur dépose une mise
-        4. Vérifie :
-            - L'événement StakeDeposited est émis
-            - Le montant de la mise est correctement enregistré
-            - Les tokens sont transférés au contrat
+        2. Le joueur approuve le transfert de tokens
+        3. Dépose une mise valide
+    - Vérifie :
+        - L'émission de l'événement StakeDeposited avec les bons paramètres
+        - Le montant correct est enregistré dans le mapping stakes
 
-- Teste les limites de mises :
-    - Tente de déposer plus que MAX_STAKE
-    - Vérifie que la transaction échoue
+- Vérifie le suivi des mises multiples :
+    - Test avec deux joueurs :
+        1. Les deux joueurs rejoignent le lobby
+        2. Chaque joueur fait une mise différente (100 et 200 tokens)
+    - Vérifie :
+        - Les mises sont correctement suivies individuellement
+        - Le mapping stakes reflète les montants exacts pour chaque joueur
+
+- Vérifie les restrictions d'état :
+    - Teste après la fin du jeu :
+        1. Configure une partie avec deux joueurs
+        2. Termine la partie via emergencyWithdraw
+        3. Tente un dépôt de mise
+    - Vérifie :
+        - Le rejet avec le message "Game is not active"
+        - L'impossibilité de déposer après la fin
+
+- Vérifie les transferts de tokens :
+    - Suit les balances :
+        1. Enregistre la balance initiale du joueur
+        2. Effectue le dépôt de mise
+        3. Vérifie :
+            - La diminution correcte de la balance du joueur
+            - L'augmentation correspondante de la balance du contrat
+
+- Vérifie les limites de mises :
+    - Teste la limite MAX_STAKE :
+        1. Tente de déposer plus que la limite
+        2. Vérifie le rejet avec "Stake exceeds maximum limit"
+        3. S'assure que la mise n'est pas enregistrée
 
 
 Tests de Gestion des Tours :
