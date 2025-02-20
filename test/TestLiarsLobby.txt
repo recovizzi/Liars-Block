@@ -1,0 +1,147 @@
+Tests d'Initialisation (Initialization) :
+
+- Vérifie l'initialisation avec la bonne adresse de token :
+    - L'adresse du token est correctement enregistrée
+    - La liste des joueurs est vide au départ
+    - L'état initial est "Waiting"
+    - L'index du tour actuel est à 0
+
+- Teste la double initialisation :
+    - La deuxième tentative d'initialisation doit échouer
+    - Vérifie le message d'erreur "Already initialized"
+
+- Vérifie le propriétaire :
+    - Le propriétaire est correctement défini lors du déploiement
+
+
+Tests de Gestion du Lobby :
+
+- Teste l'ajout de joueurs :
+    - Vérifie qu'un joueur peut rejoindre le lobby
+    - Vérifie que la liste des joueurs est mise à jour
+    - Vérifie qu'un joueur ne peut pas rejoindre deux fois
+
+- Teste la sortie de joueurs :
+    - Vérifie qu'un joueur peut quitter le lobby
+    - Vérifie le remboursement de la mise
+    - Vérifie la mise à jour de la liste des joueurs
+
+
+Tests de Gestion des Mises (Stake Management) :
+
+- Vérifie le dépôt des mises :
+    - Prépare l'environnement :
+        1. Un joueur rejoint le lobby
+        2. Le joueur approuve le transfert de tokens
+        3. Dépose une mise valide
+    - Vérifie :
+        - L'émission de l'événement StakeDeposited avec les bons paramètres
+        - Le montant correct est enregistré dans le mapping stakes
+
+- Vérifie le suivi des mises multiples :
+    - Test avec deux joueurs :
+        1. Les deux joueurs rejoignent le lobby
+        2. Chaque joueur fait une mise différente (100 et 200 tokens)
+    - Vérifie :
+        - Les mises sont correctement suivies individuellement
+        - Le mapping stakes reflète les montants exacts pour chaque joueur
+
+- Vérifie les restrictions d'état :
+    - Teste après la fin du jeu :
+        1. Configure une partie avec deux joueurs
+        2. Termine la partie via emergencyWithdraw
+        3. Tente un dépôt de mise
+    - Vérifie :
+        - Le rejet avec le message "Game is not active"
+        - L'impossibilité de déposer après la fin
+
+- Vérifie les transferts de tokens :
+    - Suit les balances :
+        1. Enregistre la balance initiale du joueur
+        2. Effectue le dépôt de mise
+        3. Vérifie :
+            - La diminution correcte de la balance du joueur
+            - L'augmentation correspondante de la balance du contrat
+
+- Vérifie les limites de mises :
+    - Teste la limite MAX_STAKE :
+        1. Tente de déposer plus que la limite
+        2. Vérifie le rejet avec "Stake exceeds maximum limit"
+        3. S'assure que la mise n'est pas enregistrée
+
+
+Tests de Gestion des Tours (Turn Management) :
+
+- Vérifie le suivi du tour courant :
+    - Configure une partie avec 3 joueurs
+    - Vérifie que le premier tour est attribué au bon joueur
+    - S'assure que l'index de tour est correctement initialisé
+
+- Vérifie l'avancement des tours :
+    - Un joueur soumet un coup valide
+    - Vérifie que le tour passe au joueur suivant
+    - Confirme que l'index est mis à jour
+
+- Empêche les coups hors tour :
+    - Tente de faire jouer un joueur hors de son tour
+    - Vérifie que la transaction est rejetée
+    - Contrôle le message d'erreur "Not your turn"
+
+- Vérifie le cycle des joueurs :
+    - Configure une partie avec 3 joueurs
+    - Fait jouer chaque joueur à son tour
+    - Vérifie que le cycle revient au premier joueur
+    - S'assure que l'ordre est maintenu
+
+
+Tests de Challenge et Révélation :
+
+- Teste la révélation des coups :
+    1. Un joueur soumet un coup
+    2. Le coup est challengé
+    3. Le joueur révèle son coup
+    4. Vérifie :
+        - La validité du hash
+        - La mise à jour du compteur de rounds perdus
+        - La réinitialisation des données du coup
+
+
+Tests du Système de Pénalités :
+
+- Vérifie l'accumulation des défaites :
+    1. Faire perdre plusieurs rounds à un joueur
+    2. Vérifier que le compteur augmente correctement
+    3. Vérifier l'élimination après 3 défaites
+
+
+Tests des Fonctions d'Urgence :
+
+- Teste le retrait d'urgence :
+    - Vérifie que seul le propriétaire peut l'exécuter
+    - Vérifie le remboursement des mises
+    - Vérifie la fin du jeu
+
+
+Tests de Démarrage du Jeu (Game Start) :
+
+- Vérifie les conditions minimales de démarrage :
+    - Empêche le démarrage avec moins de 2 joueurs
+    - Vérifie le message d'erreur "Not enough players to start"
+
+- Teste le démarrage réussi :
+    - Ajoute le nombre minimum de joueurs (2)
+    - Vérifie que le démarrage déclenche l'événement GameStarted
+    - S'assure que le jeu démarre sans erreur
+
+- Vérifie l'état du jeu au démarrage :
+    - Contrôle que l'état passe à "InGame" (état 1)
+    - Vérifie la transition depuis l'état "Waiting"
+
+- Teste la génération de référence de jeu :
+    - Vérifie que la référence est un bytes32 non nul
+    - S'assure que la référence est unique pour chaque partie
+
+- Empêche le double démarrage :
+    - Démarre une première fois le jeu
+    - Vérifie que le second démarrage échoue
+    - Contrôle le message d'erreur "Game already started"
