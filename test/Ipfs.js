@@ -2,7 +2,7 @@ import { expect } from 'chai';
 import ipfsOperation from '../scripts/IpfsFileOperation.js';
 
 describe("IPFS Storage Tests", function() {
-    let deploymentInfo;
+    let deploymentInfo; // objet de simulation de données de déploiement
 
     before(async function() {
         deploymentInfo = {

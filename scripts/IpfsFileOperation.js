@@ -11,7 +11,7 @@ class IpfsFileOperation {
         });
     }
 
-    // Add file or data to IPFS
+    // Add file or data to IPFS, json format
     async addToIPFS(content) {
         try {
             const result = await this.ipfs.add(JSON.stringify(content));
