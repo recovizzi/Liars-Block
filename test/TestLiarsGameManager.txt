@@ -33,20 +33,20 @@ Tests de Gestion du Jeu (Game Management) :
             - L'événement GameStarted est émis
             - L'état final du lobby est "InGame"
 
-Tests de Gestion des Lobbies Aléatoires
+Tests de Gestion des Lobbies Aléatoires (Random Lobby Management)
 
 - Teste la création automatique d'un lobby et vérifie les paramètres par défaut
 - Crée un lobby existant et vérifie que les nouveaux joueurs rejoignent ce lobby
 
-Tests de Sortie de Lobby
+Tests de Sortie de Lobby (Lobby Leaving) : 
 
 - Teste le processus de sortie , vérifie le remboursement des stakes et confirme la suppression du joueur du lobby
 
-Tests de Distribution des Récompenses
+Tests de Distribution des Récompenses (Reward Distribution)
 
 - Configure un jeu avec 2 joueurs ,vérifie la distribution correcte des récompenses et vérifie les balances avant/après
 
-Tests de Contrôle d'Accès
+Tests de Contrôle d'Accès (Access Control)
 
 - Teste les restrictions d'accès pour setLiarsToken : 
         Seul le propriétaire du contrat peut modifier l'adresse du token
@@ -59,3 +59,7 @@ Tests de Contrôle d'Accès
         Un utilisateur non-propriétaire (user1) ne peut pas appeler setImplementation
         La tentative échoue avec l'erreur OwnableUnauthorizedAccount
         L'erreur contient l'adresse de l'utilisateur non autorisé
+
+Tests de Gestion des États (State Management):
+
+- Tente de démarrer un jeu dans l'état "InGame"

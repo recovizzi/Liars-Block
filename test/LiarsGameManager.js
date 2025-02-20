@@ -367,5 +367,34 @@ describe("LiarsGameManager", function () {
         });
     });
 
+    describe("State Management", function () {
+        it("Should not allow starting a game that is already in progress", async function () {
+            const { gameManager, liarsToken, user1, user2 } = await loadFixture(deployLiarsGameManagerFixture);
+            
+            // Create a lobby
+            const code = "TEST123";
+            const stake = ethers.parseEther("10");
+            await gameManager.connect(user1).createPublicLobby(code, 2, stake);
+            
+            // Approve and join lobby with both players
+            await liarsToken.connect(user1).approve(gameManager.getAddress(), stake);
+            await liarsToken.connect(user2).approve(gameManager.getAddress(), stake);
+            await gameManager.connect(user1).joinLobbyByCode(code);
+            await gameManager.connect(user2).joinLobbyByCode(code);
+            
+            // Start the game first time
+            await gameManager.connect(user1).startGame(1);
+            
+            // Verify game is in "InGame" state
+            const lobbyDetails = await gameManager.getLobbyDetails(1);
+            expect(lobbyDetails.state).to.equal(1); // LobbyState.InGame
+            
+            // Try to start the game again
+            await expect(
+                gameManager.connect(user1).startGame(1)
+            ).to.be.revertedWith("Invalid lobby state");
+        });
+    });
+
     
 });

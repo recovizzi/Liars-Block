@@ -2,12 +2,12 @@ Vérifier que les dépendances sont installées :
 
 npm install ipfs-http-client
 
-Avant de lancer les tests dans un terminal : 
+Avant de lancer les tests, dans un terminal : 
 
 ipfs daemon
 
 
-Test vérification mouvement stocker sur ipfs : 
+Test vérification mouvement stocker sur ipfs (Move Verification) : 
  
  - Vérifie le stockage d'un coup sur IPFS, la récupération correcte des données et l'intégrité des données. 
  - Vérifie la détection d'un mensonge (joueur annonce rois mais joue des reines)
